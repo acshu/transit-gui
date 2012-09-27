@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from PyQt4 import QtGui, QtCore
+from ..Task import Task
+from ..Logger import logger
 
 class InputForm(QtGui.QWidget):
 
@@ -17,11 +19,10 @@ class InputForm(QtGui.QWidget):
         grid.setAlignment(QtCore.Qt.AlignTop)
         grid.setColumnStretch(1,1)
         
-        self.group = QtGui.QGroupBox()
-        self.group.setTitle('Input parameters')
-        self.group.setLayout(grid)
-        
-        vbox.addWidget(self.group)
+        self._group = QtGui.QGroupBox()
+        self._group.setTitle('Input parameters')
+        self._group.setLayout(grid)
+        vbox.addWidget(self._group)
 
         # Semi-major axis
         smaLabel = QtGui.QLabel('Semi-major axis:')
@@ -93,30 +94,54 @@ class InputForm(QtGui.QWidget):
         grid.addWidget(dkUnits, 7, 2)
         
         
-        self.calculate = QtGui.QPushButton('Calculate')
-        self.calculate.clicked.connect(self.onCalculate)
-        vbox.addWidget(self.calculate) 
+        self._calculate = QtGui.QPushButton('Calculate')
+        self._calculate.clicked.connect(self._onCalculate)
+        vbox.addWidget(self._calculate) 
        
-        self.progress = QtGui.QProgressBar()
-        self.progress.setValue(33)
-        self.progress.setTextVisible(False)
-        self.progress.hide()
-        vbox.addWidget(self.progress)
+        self._progress = QtGui.QProgressBar()
+        self._progress.setValue(0)
+        self._progress.setTextVisible(False)
+        self._progress.hide()
+        vbox.addWidget(self._progress)
         
-        self.cancel = QtGui.QPushButton('Cancel')
-        self.cancel.hide()
-        self.cancel.clicked.connect(self.onCancel)
-        vbox.addWidget(self.cancel)
+        self._cancel = QtGui.QPushButton('Cancel')
+        self._cancel.hide()
+        self._cancel.clicked.connect(self._onCancel)
+        vbox.addWidget(self._cancel)
         
+    def _onCalculate(self):
+        task = Task()
+        task.event.start.connect(self._onTaskStart)
+        task.event.progress.connect(self._onTaskProgress)
+        task.event.result.connect(self._onTaskComplete)
+        task.start()
         
-    def onCalculate(self):
-        self.calculate.hide()
-        self.progress.show()
-        self.cancel.show()
-        self.group.setDisabled(True)
+    def _onTaskStart(self):
+        self._calculate.hide()
+        self._progress.show()
+        self._progress.setValue(0)
+        self._cancel.show()
+        self._group.setDisabled(True)
         
-    def onCancel(self):
-        self.calculate.show()
-        self.progress.hide()
-        self.cancel.hide()
-        self.group.setDisabled(False)
+    def _onTaskProgress(self, progress):
+        self._progress.setValue(progress)
+        
+    def _onTaskComplete(self, result):
+        self._calculate.show()
+        self._progress.hide()
+        self._progress.setValue(0)
+        self._cancel.hide()
+        self._group.setDisabled(False)
+        
+    def _onStop(self):
+        print 'Stop'
+        
+    def _onCancel(self):
+        if Task.last() :
+            Task.last().stop()
+            
+        self._calculate.show()
+        self._progress.hide()
+        self._progress.setValue(0)
+        self._cancel.hide()
+        self._group.setDisabled(False)

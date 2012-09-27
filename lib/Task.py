@@ -1,0 +1,117 @@
+# -*- coding: utf-8 -*-
+
+import csv
+from Transit import Transit
+from PyQt4 import QtCore
+from Logger import logger
+
+class TaskResult(QtCore.QObject):
+    
+    def __init__(self, phases=[], values=[]):
+        super(TaskResult, self).__init__()
+        self.phases = phases
+        self.values = values
+        
+class TaskEvent(QtCore.QObject):
+
+     start      = QtCore.pyqtSignal()
+     progress   = QtCore.pyqtSignal(int)
+     result     = QtCore.pyqtSignal(object)
+     stop       = QtCore.pyqtSignal()
+
+class Task(QtCore.QObject):
+    
+
+    _tasks = [] 
+    event = TaskEvent()
+    
+    def __init__(self):
+        super(Task, self).__init__()
+        self.input = TaskInput()
+        self.result = TaskResult()
+        self.completed = 0
+        self.event = TaskEvent()
+        pass
+    
+    def start(self):
+        # keep Task.add here because thread is killed when no reference is stored somewhere
+        Task.add(self)
+        self.thread = Transit()
+        self.thread.event.progress.connect(self._onProgress)
+        self.thread.event.complete.connect(self._onComplete)
+        self.thread.event.stop.connect(self._onStop)
+        self.thread.start()
+        self.event.start.emit()
+        Task.event.start.emit()
+        
+    def _onProgress(self, progress):
+        logger.info("Task.onProgress(" + str(progress) + ")")
+        self.event.progress.emit(progress)
+        Task.event.progress.emit(progress)
+        
+    def _onComplete(self, transitResult):
+        logger.info("Task.onComplete")
+        result = TaskResult(transitResult.phases, transitResult.values)
+        self.event.result.emit(result)
+        Task.event.result.emit(result)
+        
+    def _onStop(self):
+        logger.info("Task.onStop")
+        self.event.stop.emit()
+        Task.event.stop.emit()
+        pass
+        
+    def stop(self):
+        del Task._tasks[Task._tasks.__len__()-1]
+        if self.thread :
+            self.thread.stop()
+    
+    @staticmethod
+    def last():
+        return Task._tasks[Task._tasks.__len__()-1]
+    
+    @staticmethod
+    def add(task):
+        Task._tasks.append(task)
+    
+class TaskInput(object):
+    
+    def __init__(self):
+        self.semi_major_axis = float(0.0)
+        self.radius_star = float(0.0)
+        self.radius_planet = float(0.0)
+        self.temperature_star = float(0.0)
+        self.temperature_planet = float(0.0)
+        self.inclination = float(0.0)
+        self.darkening = float(0.0)
+        pass
+       
+        
+class TaskImportedResult(TaskResult):
+   
+   def __init__(self):
+       super(TaskImportedResult, self).__init__()
+        
+        
+class TaskImporter(QtCore.QObject):
+    
+    @staticmethod
+    def loadDAT(filename, delimiter="\t"):
+        return TaskImporter.loadCSV(filename, delimiter)
+    
+    @staticmethod
+    def loadCSV(filename, delimiter=';', quotechar='|', header=False):
+        imported = TaskImportedResult()
+        with open(filename, 'rb') as csvfile:
+            reader = csv.reader(csvfile, delimiter=delimiter, quotechar=quotechar)
+            for row in reader:
+                phase = float(row[0].replace(',','.').replace(' ', ''))
+                value = float(row[1].replace(',','.').replace(' ', ''))
+                imported.phases.append(phase)
+                imported.values.append(value)
+        return imported
+        pass
+    
+    @staticmethod
+    def getFormats():
+        return ['dat', 'csv']
