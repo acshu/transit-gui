@@ -13,6 +13,7 @@ class Layout(QtGui.QWidget):
                         
         self.form = InputForm()
         self.result = ResultView()
+        self.setObjectName('Layout')
         
         hbox.addWidget(self.form)
         hbox.addWidget(self.result)

@@ -6,7 +6,6 @@ from matplotlib.figure import Figure
 import matplotlib
 from numpy import arange, sin, cos, pi, linspace, radians
 from scipy.interpolate import spline
-from transit import transit
 
 class ResultView(QtGui.QTabWidget):
     
@@ -24,7 +23,6 @@ class ResultPlot(QtGui.QWidget):
     def __init__(self):
         super(ResultPlot, self).__init__()
         vbox = QtGui.QVBoxLayout()
-        
         self.plot = Plot()
         vbox.addWidget(self.plot)
 
@@ -54,10 +52,29 @@ class ResultPlot(QtGui.QWidget):
         print "Import"
         
 class Plot(FigureCanvas):
+
+    __instance = None
+    
+    import_phases = []
+    import_values = []
+    
+    result_phases = []
+    result_values = []
     
     def __init__(self):
-        fig = Figure()
-        self.axes = fig.add_subplot(1, 1, 1)
+        if Plot.__instance is None :
+            Plot.__instance = self
+        else:
+            raise Exception("Plot is singleton!")
+        
+        bgColor = str(QtGui.QPalette().color(QtGui.QPalette.Active, QtGui.QPalette.Window).name())
+        matplotlib.rcParams.update({'font.size': 10})        
+                    
+        self.figure = Figure(facecolor=bgColor, edgecolor=bgColor)
+        super(Plot, self).__init__(self.figure)
+        
+        
+        self.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         #self.axes.spines['right'].set_color('none')
         #self.axes.spines['top'].set_color('none')
         #self.axes.yaxis.set_ticks_position('left')
@@ -65,50 +82,42 @@ class Plot(FigureCanvas):
         #self.axes.autoscale_view(tight=True)
         #fig.canvas
         #self.axes.hold(False)
+                                       
+        self.updateGeometry()
         
-        matplotlib.rcParams.update({'font.size': 10})
-        bgColor = str(QtGui.QPalette().color(QtGui.QPalette.Active, QtGui.QPalette.Window).name())
-        fig.set_facecolor(bgColor)
-        fig.set_edgecolor(bgColor)
+    @staticmethod
+    def instance():
+        return Plot.__instance
         
-        A=0.0343            #semimajor axis
-        Rs=A/6.05           #Stelar radius
-        Rp=Rs*0.15808       #Planetary radius
-        Tp=1786.00          #Planet Temperature
-        Ts=6200.00          #Stellar Temperature
-        i=radians(89.987)   #Inclination
-        u=0.3652            #Darkenning coefficient
+    def clear(self):
+        self.figure.clear()
+        self.draw()
         
-        predictionX, predictionY = transit(A,Rs,Rp,Tp,Ts,i,u, 1)
+    def setResult(self, phases, values):
+        self.result_phases = phases
+        self.result_values = values
+                
+    def setImport(self, phases, values):
+        self.import_phases = phases
+        self.import_values = values
         
-        A=0.0483            #semimajor axis
-        Rs=A/6.05           #Stelar radius
-        Rp=Rs*0.08808       #Planetary radius
-        Tp=50.00            #Planet Temperature
-        Ts=12000.00         #Stellar Temperature
-        i=radians(89.987)   #Inclination
-        u=0.3652            #Darkenning coefficient
-        observationX, observationY = transit(A,Rs,Rp,Tp,Ts,i,u, 1)
-
-        # Smoothing        
-        #predictionXS = linspace(predictionX.min(), predictionX.max(), 300)
-        #predictionYS = spline(predictionX, predictionY, predictionXS)
+    def redraw(self):
+        self.clear()
         
-        #self.axes.plot(predictionXS, predictionYS, label='Prediction Smooth')
-        self.axes.plot(predictionX, predictionY, label='Prediction')
-        self.axes.plot(observationX, observationY, linestyle='--', color='r', label='Observation')
-        self.axes.legend()
+        self.axes = self.figure.add_subplot(1, 1, 1)
+        self.axes.grid(True)
         self.axes.set_xlabel('Phase')
-        self.axes.set_ylabel('Magnitude')
-        self.axes.set_title('A=0.666, Rs=0.55, Rp=0.001, Ts=5000, Tp=50, i=33')
-
-        FigureCanvas.__init__(self, fig)
-        #self.setParent(parent)
-
-        FigureCanvas.setSizePolicy(self,
-                                   QtGui.QSizePolicy.Expanding,
-                                   QtGui.QSizePolicy.Expanding)
-        FigureCanvas.updateGeometry(self)
+        self.axes.set_ylabel('Magnitude')        
+        
+        if len(self.result_phases):
+            self.axes.plot(self.result_phases, self.result_values, color='b', label="Prediction")
+        
+        if len(self.import_phases):
+            self.aximport = self.figure.add_subplot(1,1,1)
+            self.aximport.plot(self.import_phases, self.import_values, linestyle='--', color='r', label='Observation')
+                
+        self.draw()
+        
         
 class ImportDialog(QtGui.QDialog):
     

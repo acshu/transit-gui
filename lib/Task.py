@@ -36,7 +36,19 @@ class Task(QtCore.QObject):
     def start(self):
         # keep Task.add here because thread is killed when no reference is stored somewhere
         Task.add(self)
+
         self.thread = Transit()
+        self.thread.set_orbit_radius(self.input.semi_major_axis)
+        self.thread.set_star_radius(self.input.star_radius)
+        self.thread.set_planet_radius(self.input.planet_radius)
+        self.thread.set_star_temperature(self.input.star_temperature)
+        self.thread.set_planet_temperature(self.input.planet_temperature)
+        self.thread.set_star_darkening(self.input.darkening)
+        self.thread.set_phase_start(self.input.phase_start)
+        self.thread.set_phase_end(self.input.phase_end)
+        self.thread.set_phase_step(self.input.phase_step)
+        
+        
         self.thread.event.progress.connect(self._onProgress)
         self.thread.event.complete.connect(self._onComplete)
         self.thread.event.stop.connect(self._onStop)
@@ -78,12 +90,15 @@ class TaskInput(object):
     
     def __init__(self):
         self.semi_major_axis = float(0.0)
-        self.radius_star = float(0.0)
-        self.radius_planet = float(0.0)
-        self.temperature_star = float(0.0)
-        self.temperature_planet = float(0.0)
+        self.star_radius = float(0.0)
+        self.planet_radius = float(0.0)
+        self.star_temperature = float(0.0)
+        self.planet_temperature = float(0.0)
         self.inclination = float(0.0)
         self.darkening = float(0.0)
+        self.phase_start = float(0.0)
+        self.phase_end = float(0.0)
+        self.phase_step = float(0.0)
         pass
        
         
