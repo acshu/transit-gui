@@ -6,6 +6,7 @@ from matplotlib.figure import Figure
 import matplotlib
 from numpy import arange, sin, cos, pi, linspace, radians
 from scipy.interpolate import spline
+from ..Task import TaskImporter
 
 class ResultView(QtGui.QTabWidget):
     
@@ -71,6 +72,7 @@ class Plot(FigureCanvas):
         matplotlib.rcParams.update({'font.size': 10})        
                     
         self.figure = Figure(facecolor=bgColor, edgecolor=bgColor)
+        self.figure.hold(False)
         super(Plot, self).__init__(self.figure)
         
         
@@ -82,7 +84,7 @@ class Plot(FigureCanvas):
         #self.axes.autoscale_view(tight=True)
         #fig.canvas
         #self.axes.hold(False)
-                                       
+                                               
         self.updateGeometry()
         
     @staticmethod
@@ -103,29 +105,29 @@ class Plot(FigureCanvas):
         
     def redraw(self):
         self.clear()
-        
         self.axes = self.figure.add_subplot(1, 1, 1)
         self.axes.grid(True)
         self.axes.set_xlabel('Phase')
-        self.axes.set_ylabel('Magnitude')        
+        self.axes.set_ylabel('Magnitude')
         
         if len(self.result_phases):
             self.axes.plot(self.result_phases, self.result_values, color='b', label="Prediction")
         
         if len(self.import_phases):
-            self.aximport = self.figure.add_subplot(1,1,1)
-            self.aximport.plot(self.import_phases, self.import_values, linestyle='--', color='r', label='Observation')
+            self.axes.scatter(self.import_phases, self.import_values, s=0.1, color='r', label='Observation')
                 
         self.draw()
         
         
 class ImportDialog(QtGui.QDialog):
+
+    filename = None
     
     def __init__(self):
         super(ImportDialog, self).__init__()
         self.setWindowTitle('Import...')
         self.setWindowIcon(QtGui.QIcon('assets/import.png'))
-        self.resize(400, 160)
+        self.resize(400, 100)
         
         vbox = QtGui.QVBoxLayout()
         vbox.setAlignment(QtCore.Qt.AlignTop)
@@ -133,39 +135,18 @@ class ImportDialog(QtGui.QDialog):
         fgroup.setFixedHeight(60)
         fhbox = QtGui.QHBoxLayout()
         fgroup.setLayout(fhbox)
-        label = QtGui.QLabel('No file selected')
-        fhbox.addWidget(label)
+        self.fnameLabel = QtGui.QLabel('No file selected')
+        fhbox.addWidget(self.fnameLabel)
         fbrowse = QtGui.QPushButton('Browse...')
         fbrowse.setFixedWidth(80)
+        fbrowse.clicked.connect(self._onBrowse)
         fhbox.addWidget(fbrowse)
         vbox.addWidget(fgroup)
-
-        sgroup = QtGui.QGroupBox('Settings')
-        sgroup.setFixedHeight(60)
-        sgrid = QtGui.QGridLayout()
-        sgrid.setAlignment(QtCore.Qt.AlignTop)
-        sgroup.setLayout(sgrid)
-        ssepLabel = QtGui.QLabel('Separator:')
-        ssepValue = QtGui.QLineEdit(';')
-        sgrid.addWidget(ssepLabel, 1, 0)
-        sgrid.addWidget(ssepValue, 1, 1)
-
-        sescLabel = QtGui.QLabel('Quote char:')
-        sescValue = QtGui.QLineEdit('"')
-        sgrid.addWidget(sescLabel, 1, 2)
-        sgrid.addWidget(sescValue, 1, 3)
         
-        shedLabel = QtGui.QLabel('Skip first line:')
-        shedCheck = QtGui.QCheckBox()
-        sgrid.addWidget(shedLabel, 1, 4)
-        sgrid.addWidget(shedCheck, 1, 5)    
-        
-        vbox.addWidget(sgroup)
-
         bhbox = QtGui.QHBoxLayout()
         bhbox.setAlignment(QtCore.Qt.AlignRight)
         bimport = QtGui.QPushButton('Import')
-        bimport.clicked.connect(self.onImport)
+        bimport.clicked.connect(self._onImport)
         bhbox.addWidget(bimport)
         bcancel = QtGui.QPushButton('Cancel')
         bcancel.clicked.connect(self.close)
@@ -174,8 +155,38 @@ class ImportDialog(QtGui.QDialog):
         vbox.addLayout(bhbox)                
         self.setLayout(vbox)
         
-    def onImport(self):
-        print 'import'
+    def _onBrowse(self):
+        directory = "" if self.filename is None else QtCore.QString("/").join(self.filename.split("/")[:-1])
+        types = TaskImporter.getFormats()
+        filters = []
+        
+        for value in types :
+            filters.append(value.upper() + " (*." + value + ")")
+            
+        filters.append("All files (*.*)")
+        
+        filename = QtGui.QFileDialog.getOpenFileName(self, 'Open file', directory=directory, filter=";;".join(filters))
+        
+        if filename :
+            self.filename = filename
+            self.fnameLabel.setText(filename.split("/")[-1])
+        else:
+            self.fnameLabel.setText('No file selected')
+        
+        
+    def _onImport(self):
+        if self.filename is None :
+            QtGui.QMessageBox.warning(self, "Error", "Choose file!")
+            return
+        try:
+            result = TaskImporter.loadFile(self.filename)
+            Plot.instance().setImport(result.phases, result.values)
+            Plot.instance().redraw()
+        except:
+            QtGui.QMessageBox.critical(self, "Import error", "Error importing data!")
+            
+       
+        self.close()
         
 class ExportPlotDialog(QtGui.QDialog):
     

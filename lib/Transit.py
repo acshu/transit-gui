@@ -5,10 +5,10 @@ from transitlib.transit import Transit as TransitLib
 
 class TransitResult(QtCore.QObject):
     
-    def __init__(self, phases=[], values=[]):
+    def __init__(self):
         super(TransitResult, self).__init__()
-        self.phases = phases
-        self.values = values
+        self.phases = []
+        self.values = []
         
 class TransitEvent(QtCore.QObject):
     
@@ -35,7 +35,9 @@ class Transit(TransitLib, QtCore.QThread):
         pass
     
     def onComplete(self, phases, values):
-        result = TransitResult(phases, values)
+        result = TransitResult()
+        result.phases = phases
+        result.values = values
         self.event.complete.emit(result)
         Transit.event.complete.emit(result)
         pass

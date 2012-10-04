@@ -4,13 +4,14 @@ import csv
 from Transit import Transit
 from PyQt4 import QtCore
 from Logger import logger
+import re
 
 class TaskResult(QtCore.QObject):
     
-    def __init__(self, phases=[], values=[]):
+    def __init__(self):
         super(TaskResult, self).__init__()
-        self.phases = phases
-        self.values = values
+        self.phases = []
+        self.values = []
         
 class TaskEvent(QtCore.QObject):
 
@@ -63,7 +64,9 @@ class Task(QtCore.QObject):
         
     def _onComplete(self, transitResult):
         logger.info("Task.onComplete")
-        result = TaskResult(transitResult.phases, transitResult.values)
+        result = TaskResult()
+        result.phases = transitResult.phases
+        result.values = transitResult.values
         self.event.result.emit(result)
         Task.event.result.emit(result)
         
@@ -111,21 +114,18 @@ class TaskImportedResult(TaskResult):
 class TaskImporter(QtCore.QObject):
     
     @staticmethod
-    def loadDAT(filename, delimiter="\t"):
-        return TaskImporter.loadCSV(filename, delimiter)
-    
-    @staticmethod
-    def loadCSV(filename, delimiter=';', quotechar='|', header=False):
+    def loadFile(filename):
         imported = TaskImportedResult()
+        print imported.phases
         with open(filename, 'rb') as csvfile:
-            reader = csv.reader(csvfile, delimiter=delimiter, quotechar=quotechar)
-            for row in reader:
-                phase = float(row[0].replace(',','.').replace(' ', ''))
-                value = float(row[1].replace(',','.').replace(' ', ''))
-                imported.phases.append(phase)
-                imported.values.append(value)
+            for line in csvfile.readlines():
+                m = re.search('(-?\d+\.\d+)(\D+?)(-?\d+\.\d+)', line)
+                
+                if not m is None:
+                    imported.phases.append(float(m.group(1)))
+                    imported.values.append(float(m.group(3)))
+                
         return imported
-        pass
     
     @staticmethod
     def getFormats():

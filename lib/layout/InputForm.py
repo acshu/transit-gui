@@ -31,9 +31,9 @@ class InputForm(QtGui.QWidget):
         self.smaValue.setObjectName('smaValue')
         self.smaValue.setRange(0, 9999)
         self.smaValue.setSingleStep(0.01)
-        self.smaValue.setDecimals(6)
+        self.smaValue.setDecimals(10)
         self.smaValue.setAccelerated(True)
-        self.smaValue.setValue(10)
+        self.smaValue.setValue(0.0171000000) # 0.037100
         self.smaUnits = QtGui.QLabel('AU')
 
         self.grid.addWidget(self.smaLabel, 1, 0)
@@ -45,9 +45,9 @@ class InputForm(QtGui.QWidget):
         self.srValue = QtGui.QDoubleSpinBox()
         self.srValue.setRange(0, 9999)
         self.srValue.setSingleStep(0.01)
-        self.srValue.setDecimals(6)
+        self.srValue.setDecimals(10)
         self.srValue.setAccelerated(True)
-        self.srValue.setValue(1)
+        self.srValue.setValue(0.00364026905)
         self.srUnits = QtGui.QLabel('AU')
         
         self.grid.addWidget(self.srLabel, 2, 0)
@@ -59,9 +59,9 @@ class InputForm(QtGui.QWidget):
         self.prValue = QtGui.QDoubleSpinBox()
         self.prValue.setRange(0, 9999)
         self.prValue.setSingleStep(0.01)
-        self.prValue.setDecimals(6)
+        self.prValue.setDecimals(10)
         self.prValue.setAccelerated(True)
-        self.prValue.setValue(0.1)
+        self.prValue.setValue(0.0005847123) # 0.00050471226
         self.prUnits = QtGui.QLabel('AU')
         
         self.grid.addWidget(self.prLabel, 3, 0)
@@ -75,7 +75,7 @@ class InputForm(QtGui.QWidget):
         self.stValue.setSingleStep(1)
         self.stValue.setDecimals(0)
         self.stValue.setAccelerated(True)
-        self.stValue.setValue(8000)
+        self.stValue.setValue(4675)
         self.stUnits = QtGui.QLabel('K')
         
         self.grid.addWidget(self.stLabel, 4, 0)
@@ -89,7 +89,7 @@ class InputForm(QtGui.QWidget):
         self.ptValue.setSingleStep(1)
         self.ptValue.setDecimals(0)
         self.ptValue.setAccelerated(True)
-        self.ptValue.setValue(80)
+        self.ptValue.setValue(1300)
         self.ptUnits = QtGui.QLabel('K')
         
         self.grid.addWidget(self.ptLabel, 5, 0)
@@ -101,9 +101,9 @@ class InputForm(QtGui.QWidget):
         self.inValue = QtGui.QDoubleSpinBox()
         self.inValue.setRange(0, 90)
         self.inValue.setSingleStep(0.01)
-        self.inValue.setDecimals(6)
+        self.inValue.setDecimals(10)
         self.inValue.setAccelerated(True)
-        self.inValue.setValue(90)
+        self.inValue.setValue(86.80)
         self.inUnits = QtGui.QLabel('Deg')
         
         
@@ -117,7 +117,7 @@ class InputForm(QtGui.QWidget):
         self.dkUnits = QtGui.QLabel('')
         self.dkValue.setRange(0, 1)
         self.dkValue.setSingleStep(0.01)
-        self.dkValue.setDecimals(6)
+        self.dkValue.setDecimals(10)
         self.dkValue.setAccelerated(True)
         self.dkValue.setValue(0.2)
 
@@ -154,7 +154,7 @@ class InputForm(QtGui.QWidget):
         task.input.darkening = self.dkValue.value()
         task.input.inclination = self.inValue.value()
         task.input.phase_start = 0.0
-        task.input.phase_end = 0.2
+        task.input.phase_end = 0.10
         task.input.phase_step = 0.001
         
         task.event.start.connect(self._onTaskStart)
