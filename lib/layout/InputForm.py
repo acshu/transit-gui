@@ -4,18 +4,30 @@ from PyQt4 import QtGui, QtCore
 from ..Task import Task, TaskInput
 from ..Logger import logger
 from ResultView import Plot
+from ConfigParser import ConfigParser
+import os
 
 class InputForm(QtGui.QWidget):
 
+    __instance = None
+    
+    @staticmethod
+    def instance():
+        return InputForm.__instance;
+
     def __init__(self):
+
+        if InputForm.__instance == None :
+            InputForm.__instance = self
+            
         super(InputForm, self).__init__()
 
         self.vbox = QtGui.QVBoxLayout()
         self.vbox.setContentsMargins(0,0,0,0)
                                         
         self.setLayout(self.vbox)
-        self.setFixedWidth(250)
-        
+        self.setFixedWidth(290)
+                        
         self.grid = QtGui.QGridLayout()        
         self.grid.setAlignment(QtCore.Qt.AlignTop)
         self.grid.setColumnStretch(1,1)
@@ -103,7 +115,7 @@ class InputForm(QtGui.QWidget):
         self.inValue.setSingleStep(0.01)
         self.inValue.setDecimals(10)
         self.inValue.setAccelerated(True)
-        self.inValue.setValue(86.80)
+        self.inValue.setValue(90) # 86.80
         self.inUnits = QtGui.QLabel('Deg')
         
         
@@ -121,11 +133,55 @@ class InputForm(QtGui.QWidget):
         self.dkValue.setAccelerated(True)
         self.dkValue.setValue(0.2)
 
-        
-        
         self.grid.addWidget(self.dkLabel, 7, 0)
         self.grid.addWidget(self.dkValue, 7, 1)
         self.grid.addWidget(self.dkUnits, 7, 2)
+        
+        # phase start
+        self.pstLabel = QtGui.QLabel('Phase start:')
+        self.pstValue = QtGui.QDoubleSpinBox()
+        self.pstValue.setRange(0, 1)
+        self.pstValue.setSingleStep(0.01)
+        self.pstValue.setDecimals(10)
+        self.pstValue.setAccelerated(True)
+        self.pstValue.setValue(0)
+        
+        self.grid.addWidget(self.pstLabel, 8, 0)
+        self.grid.addWidget(self.pstValue, 8, 1)
+        
+        # phase end
+        self.penLabel = QtGui.QLabel('Phase end:')
+        self.penValue = QtGui.QDoubleSpinBox()
+        self.penValue.setRange(0, 1)
+        self.penValue.setSingleStep(0.01)
+        self.penValue.setDecimals(10)
+        self.penValue.setAccelerated(True)
+        self.penValue.setValue(0.2)
+        
+        self.grid.addWidget(self.penLabel, 9, 0)
+        self.grid.addWidget(self.penValue, 9, 1)
+        
+        # phase step
+        self.pspLabel = QtGui.QLabel('Phase step:')
+        self.pspValue = QtGui.QDoubleSpinBox()
+        self.pspValue.setRange(0, 1)
+        self.pspValue.setSingleStep(0.00001)
+        self.pspValue.setDecimals(10)
+        self.pspValue.setAccelerated(True)
+        self.pspValue.setValue(0.0001)
+        
+        self.grid.addWidget(self.pspLabel, 10, 0)
+        self.grid.addWidget(self.pspValue, 10, 1)
+
+        # integration precision        
+        self.pcLabel = QtGui.QLabel('Intgration precision 10^?:')
+        self.pcValue = QtGui.QDoubleSpinBox()
+        self.pcValue.setDecimals(0)
+        self.pcValue.setRange(-10, 0)
+        self.pcValue.setValue(-1)
+                
+        self.grid.addWidget(self.pcLabel, 11, 0)
+        self.grid.addWidget(self.pcValue, 11, 1)
         
         
         self._calculate = QtGui.QPushButton('Calculate')
@@ -143,6 +199,9 @@ class InputForm(QtGui.QWidget):
         self._cancel.clicked.connect(self._onCancel)
         self.vbox.addWidget(self._cancel)
         
+        if os.path.exists("./data/last.ini") :
+            self.loadParams("./data/last.ini")
+        
     def _onCalculate(self):
 
         task = Task()        
@@ -153,9 +212,13 @@ class InputForm(QtGui.QWidget):
         task.input.planet_temperature = self.ptValue.value()
         task.input.darkening = self.dkValue.value()
         task.input.inclination = self.inValue.value()
-        task.input.phase_start = 0.0
-        task.input.phase_end = 0.10
-        task.input.phase_step = 0.001
+        task.input.phase_start = self.pstValue.value()
+        task.input.phase_end = self.penValue.value()
+        task.input.phase_step = self.pspValue.value()
+        task.input.precision = 10**self.pcValue.value()
+        
+        if len(Plot.instance().import_phases):
+            task.input.phases_injection = Plot.instance().import_phases
         
         task.event.start.connect(self._onTaskStart)
         task.event.progress.connect(self._onTaskProgress)
@@ -194,3 +257,61 @@ class InputForm(QtGui.QWidget):
         self._progress.setValue(0)
         self._cancel.hide()
         self._group.setDisabled(False)
+        
+    def loadParams(self, filename):
+        config = ConfigParser()
+        config.read(filename)
+        
+        if config.has_option('input', 'semi_major_axis'):
+            self.smaValue.setValue(config.getfloat('input', 'semi_major_axis'))
+            
+        if config.has_option('input', 'star_radius'):
+            self.srValue.setValue(config.getfloat('input', 'star_radius'))
+            
+        if config.has_option('input', 'planet_radius'):
+            self.prValue.setValue(config.getfloat('input', 'planet_radius'))
+            
+        if config.has_option('input', 'star_temperature'):
+            self.stValue.setValue(config.getfloat('input', 'star_temperature'))
+            
+        if config.has_option('input', 'planet_temperature'):
+            self.ptValue.setValue(config.getfloat('input', 'planet_temperature'))
+
+        if config.has_option('input', 'inclination'):
+            self.inValue.setValue(config.getfloat('input', 'inclination'))            
+            
+        if config.has_option('input', 'darkening'):
+            self.dkValue.setValue(config.getfloat('input', 'darkening'))
+            
+        if config.has_option('input', 'phase_start'):
+            self.pstValue.setValue(config.getfloat('input', 'phase_start'))
+            
+        if config.has_option('input', 'phase_end'):
+            self.penValue.setValue(config.getfloat('input', 'phase_end'))
+            
+        if config.has_option('input', 'phase_step'):
+            self.pspValue.setValue(config.getfloat('input', 'phase_step'))
+            
+        if config.has_option('input', 'precision'):
+            self.pcValue.setValue(config.getfloat('input', 'precision'))
+            
+    
+    def saveParams(self, filename):
+        config = ConfigParser()
+        config.add_section('input')
+        
+        config.set('input', 'semi_major_axis', self.smaValue.value())
+        config.set('input', 'star_radius', self.srValue.value())
+        config.set('input', 'planet_radius', self.prValue.value())
+        config.set('input', 'star_temperature', self.stValue.value())
+        config.set('input', 'planet_temperature', self.ptValue.value())
+        config.set('input', 'inclination', self.inValue.value())
+        config.set('input', 'darkening', self.dkValue.value())
+        config.set('input', 'phase_start', self.pstValue.value())
+        config.set('input', 'phase_end', self.penValue.value())
+        config.set('input', 'phase_step', self.pspValue.value())
+        config.set('input', 'precision', self.pcValue.value())
+        
+        with open(filename, 'wb') as configfile:
+            config.write(configfile)
+        pass

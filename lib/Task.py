@@ -39,15 +39,18 @@ class Task(QtCore.QObject):
         Task.add(self)
 
         self.thread = Transit()
-        self.thread.set_orbit_radius(self.input.semi_major_axis)
+        self.thread.set_semi_major_axis(self.input.semi_major_axis)
         self.thread.set_star_radius(self.input.star_radius)
         self.thread.set_planet_radius(self.input.planet_radius)
         self.thread.set_star_temperature(self.input.star_temperature)
         self.thread.set_planet_temperature(self.input.planet_temperature)
+        self.thread.set_inclination(self.input.inclination)
         self.thread.set_star_darkening(self.input.darkening)
         self.thread.set_phase_start(self.input.phase_start)
         self.thread.set_phase_end(self.input.phase_end)
         self.thread.set_phase_step(self.input.phase_step)
+        self.thread.set_precision(self.input.precision)
+        self.thread.set_phases_injection(self.input.phases_injection)
         
         
         self.thread.event.progress.connect(self._onProgress)
@@ -102,6 +105,8 @@ class TaskInput(object):
         self.phase_start = float(0.0)
         self.phase_end = float(0.0)
         self.phase_step = float(0.0)
+        self.precision = 0
+        self.phases_injection = []
         pass
        
         
