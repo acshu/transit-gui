@@ -1,0 +1,4 @@
+Put your params/transit curves files in separate folders.
+Example:
+WASP10b/params.ini
+WASP10b/curve.dat

@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
 
-import csv
 from Transit import Transit
-from PyQt4 import QtCore
+from PyQt4.QtCore import pyqtSignal, QObject
 from Logger import logger
 import re
 
-class TaskResult(QtCore.QObject):
+class TaskResult(QObject):
     
     def __init__(self):
         super(TaskResult, self).__init__()
         self.phases = []
         self.values = []
         
-class TaskEvent(QtCore.QObject):
+class TaskEvent(QObject):
 
-     start      = QtCore.pyqtSignal()
-     progress   = QtCore.pyqtSignal(int)
-     result     = QtCore.pyqtSignal(object)
-     stop       = QtCore.pyqtSignal()
+     start      = pyqtSignal()
+     progress   = pyqtSignal(int)
+     result     = pyqtSignal(object)
+     stop       = pyqtSignal()
 
-class Task(QtCore.QObject):
+class Task(QObject):
     
 
     _tasks = [] 
@@ -116,7 +115,7 @@ class TaskImportedResult(TaskResult):
        super(TaskImportedResult, self).__init__()
         
         
-class TaskImporter(QtCore.QObject):
+class TaskImporter(QObject):
     
     @staticmethod
     def loadFile(filename):

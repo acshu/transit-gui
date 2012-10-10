@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4 import QtGui, QtCore
-from ..Task import Task, TaskInput
-from ..Logger import logger
+from PyQt4.QtGui import QLabel, QDoubleSpinBox, QWidget, QPushButton, QVBoxLayout, QGridLayout, QGroupBox, QProgressBar
+from PyQt4.QtCore import Qt
+from ..Task import Task
 from ResultView import Plot
 from ConfigParser import ConfigParser
-import os, sys
-import scipy.constants
+from os.path import exists
 
-class InputForm(QtGui.QWidget):
+class InputForm(QWidget):
 
     __instance = None
     
     SUN_RADIUS = 6.955*10**8
     JUPITER_RADIUS = 6.9173*10**7
-    AU = scipy.constants.au
+    AU = 149597870691.0
     
     @staticmethod
     def instance():
@@ -28,23 +27,23 @@ class InputForm(QtGui.QWidget):
         
         self._changeFromSignal = False
 
-        self.vbox = QtGui.QVBoxLayout()
+        self.vbox = QVBoxLayout()
         self.vbox.setContentsMargins(0,0,0,0)
                                         
         self.setLayout(self.vbox)
         self.setFixedWidth(290)
                         
-        self.grid = QtGui.QGridLayout()        
-        self.grid.setAlignment(QtCore.Qt.AlignTop)
+        self.grid = QGridLayout()        
+        self.grid.setAlignment(Qt.AlignTop)
         self.grid.setColumnStretch(1,1)
         
-        self._group = QtGui.QGroupBox()
+        self._group = QGroupBox()
         self._group.setTitle('Input parameters')
         self._group.setLayout(self.grid)
         self.vbox.addWidget(self._group)
 
         # Semi-major axis
-        self.smaLabel = QtGui.QLabel('Semi-major axis:')
+        self.smaLabel = QLabel('Semi-major axis:')
         self.smaValue = CustomDoubleSpinBox()
         self.smaValue.setObjectName('smaValue')
         self.smaValue.setRange(0, 9999)
@@ -52,14 +51,14 @@ class InputForm(QtGui.QWidget):
         self.smaValue.setDecimals(10)
         self.smaValue.setAccelerated(True)
         self.smaValue.setValue(0.0171000000) # 0.037100
-        self.smaUnits = QtGui.QLabel('AU')
+        self.smaUnits = QLabel('AU')
 
         self.grid.addWidget(self.smaLabel, 1, 0)
         self.grid.addWidget(self.smaValue, 1, 1)
         self.grid.addWidget(self.smaUnits, 1, 2)
         
         # Stellar radius
-        self.srLabel = QtGui.QLabel('Stellar radius:')
+        self.srLabel = QLabel('Stellar radius:')
         self.srValue = CustomDoubleSpinBox()
         self.srrValue = CustomDoubleSpinBox()
         
@@ -71,7 +70,7 @@ class InputForm(QtGui.QWidget):
         self.srValue.setDecimals(10)
         self.srValue.setAccelerated(True)
         self.srValue.setValue(0.00364026905)
-        self.srUnits = QtGui.QLabel('AU')
+        self.srUnits = QLabel('AU')
         
         self.grid.addWidget(self.srLabel, 2, 0)
         self.grid.addWidget(self.srValue, 2, 1)
@@ -81,13 +80,13 @@ class InputForm(QtGui.QWidget):
         self.srrValue.setSingleStep(0.01)
         self.srrValue.setDecimals(10)
         self.srrValue.setAccelerated(True)
-        self.srrUnits = QtGui.QLabel('R<small>sun</small>')
+        self.srrUnits = QLabel('R<small>sun</small>')
         
         self.grid.addWidget(self.srrValue, 3, 1)
         self.grid.addWidget(self.srrUnits, 3, 2)
         
         # Planet radius
-        self.prLabel = QtGui.QLabel('Planet radius:')
+        self.prLabel = QLabel('Planet radius:')
         self.prValue = CustomDoubleSpinBox()
         self.prrValue = CustomDoubleSpinBox()
         
@@ -99,7 +98,7 @@ class InputForm(QtGui.QWidget):
         self.prValue.setDecimals(10)
         self.prValue.setAccelerated(True)
         self.prValue.setValue(0.0005847123) # 0.00050471226
-        self.prUnits = QtGui.QLabel('AU')
+        self.prUnits = QLabel('AU')
         
         self.grid.addWidget(self.prLabel, 4, 0)
         self.grid.addWidget(self.prValue, 4, 1)
@@ -109,49 +108,49 @@ class InputForm(QtGui.QWidget):
         self.prrValue.setSingleStep(0.01)
         self.prrValue.setDecimals(10)
         self.prrValue.setAccelerated(True)
-        self.prrUnits = QtGui.QLabel('R<small>jup</small>')
+        self.prrUnits = QLabel('R<small>jup</small>')
         
         self.grid.addWidget(self.prrValue, 5, 1)
         self.grid.addWidget(self.prrUnits, 5, 2)
         
                 
         # Stellar temperature
-        self.stLabel = QtGui.QLabel('Stellar temperature:')
+        self.stLabel = QLabel('Stellar temperature:')
         self.stValue = CustomDoubleSpinBox()
         self.stValue.setRange(0, 99999)
         self.stValue.setSingleStep(1)
         self.stValue.setDecimals(0)
         self.stValue.setAccelerated(True)
         self.stValue.setValue(4675)
-        self.stUnits = QtGui.QLabel('K')
+        self.stUnits = QLabel('K')
         
         self.grid.addWidget(self.stLabel, 6, 0)
         self.grid.addWidget(self.stValue, 6, 1)
         self.grid.addWidget(self.stUnits, 6, 2)
         
         # Planet temperature
-        self.ptLabel = QtGui.QLabel('Planet temperature:')
+        self.ptLabel = QLabel('Planet temperature:')
         self.ptValue = CustomDoubleSpinBox()
         self.ptValue.setRange(0, 99999)
         self.ptValue.setSingleStep(1)
         self.ptValue.setDecimals(0)
         self.ptValue.setAccelerated(True)
         self.ptValue.setValue(1300)
-        self.ptUnits = QtGui.QLabel('K')
+        self.ptUnits = QLabel('K')
         
         self.grid.addWidget(self.ptLabel, 7, 0)
         self.grid.addWidget(self.ptValue, 7, 1)
         self.grid.addWidget(self.ptUnits, 7, 2)
         
         # Inclination
-        self.inLabel = QtGui.QLabel('Inclination:')
+        self.inLabel = QLabel('Inclination:')
         self.inValue = CustomDoubleSpinBox()
         self.inValue.setRange(0, 90)
         self.inValue.setSingleStep(0.01)
         self.inValue.setDecimals(10)
         self.inValue.setAccelerated(True)
         self.inValue.setValue(90) # 86.80
-        self.inUnits = QtGui.QLabel('Deg')
+        self.inUnits = QLabel('Deg')
         
         
         self.grid.addWidget(self.inLabel, 8, 0)
@@ -159,9 +158,9 @@ class InputForm(QtGui.QWidget):
         self.grid.addWidget(self.inUnits, 8, 2)
         
         # Darkening coefficient
-        self.dkLabel = QtGui.QLabel('Darkening coefficient:')
+        self.dkLabel = QLabel('Darkening coefficient:')
         self.dkValue = CustomDoubleSpinBox()
-        self.dkUnits = QtGui.QLabel('')
+        self.dkUnits = QLabel('')
         self.dkValue.setRange(0, 1)
         self.dkValue.setSingleStep(0.01)
         self.dkValue.setDecimals(10)
@@ -173,7 +172,7 @@ class InputForm(QtGui.QWidget):
         self.grid.addWidget(self.dkUnits, 9, 2)
         
         # phase start
-        self.pstLabel = QtGui.QLabel('Phase start:')
+        self.pstLabel = QLabel('Phase start:')
         self.pstValue = CustomDoubleSpinBox()
         self.pstValue.setRange(0, 1)
         self.pstValue.setSingleStep(0.01)
@@ -185,7 +184,7 @@ class InputForm(QtGui.QWidget):
         self.grid.addWidget(self.pstValue, 10, 1)
         
         # phase end
-        self.penLabel = QtGui.QLabel('Phase end:')
+        self.penLabel = QLabel('Phase end:')
         self.penValue = CustomDoubleSpinBox()
         self.penValue.setRange(0, 1)
         self.penValue.setSingleStep(0.01)
@@ -197,7 +196,7 @@ class InputForm(QtGui.QWidget):
         self.grid.addWidget(self.penValue, 11, 1)
         
         # phase step
-        self.pspLabel = QtGui.QLabel('Phase step:')
+        self.pspLabel = QLabel('Phase step:')
         self.pspValue = CustomDoubleSpinBox()
         self.pspValue.setRange(0, 1)
         self.pspValue.setSingleStep(0.00001)
@@ -209,7 +208,7 @@ class InputForm(QtGui.QWidget):
         self.grid.addWidget(self.pspValue, 12, 1)
 
         # integration precision        
-        self.pcLabel = QtGui.QLabel('Intgration precision 10^?:')
+        self.pcLabel = QLabel('Intgration precision 10^?:')
         self.pcValue = CustomDoubleSpinBox()
         self.pcValue.setDecimals(0)
         self.pcValue.setRange(-10, 0)
@@ -219,23 +218,23 @@ class InputForm(QtGui.QWidget):
         self.grid.addWidget(self.pcValue, 13, 1)
         
         
-        self._calculate = QtGui.QPushButton('Calculate')
+        self._calculate = QPushButton('Calculate')
         self._calculate.clicked.connect(self._onCalculate)
         self.vbox.addWidget(self._calculate) 
        
-        self._progress = QtGui.QProgressBar()
+        self._progress = QProgressBar()
         self._progress.setValue(0)
         self._progress.setTextVisible(False)
         self._progress.hide()
         self.vbox.addWidget(self._progress)
         
-        self._cancel = QtGui.QPushButton('Cancel')
+        self._cancel = QPushButton('Cancel')
         self._cancel.hide()
         self._cancel.clicked.connect(self._onCancel)
         self.vbox.addWidget(self._cancel)
         
-        if os.path.exists("./data/last.ini") :
-            self.loadParams("./data/last.ini")
+        if exists("./config/last-session.ini") :
+            self.loadParams("./config/last-session.ini")
 
         
     def _onSRChange(self, value):
@@ -377,13 +376,13 @@ class InputForm(QtGui.QWidget):
         pass
     
     
-class CustomDoubleSpinBox(QtGui.QDoubleSpinBox):
+class CustomDoubleSpinBox(QDoubleSpinBox):
     
     def __init__(self,parent=None,value=0):
         super(CustomDoubleSpinBox, self).__init__(parent)
         
     def textFromValue(self, value):
-        result = str(QtGui.QDoubleSpinBox.textFromValue(self, value))
+        result = str(QDoubleSpinBox.textFromValue(self, value))
         if result.find(".") > 0 :
             result = result.rstrip("0")
             result = result.rstrip(".")

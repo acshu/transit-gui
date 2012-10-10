@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4 import QtCore
+from PyQt4.QtCore import QObject, pyqtSignal, QThread
 from transitlib.transit import Transit as TransitLib
 
-class TransitResult(QtCore.QObject):
+class TransitResult(QObject):
     
     def __init__(self):
         super(TransitResult, self).__init__()
         self.phases = []
         self.values = []
         
-class TransitEvent(QtCore.QObject):
+class TransitEvent(QObject):
     
-    progress = QtCore.pyqtSignal(int)
-    complete = QtCore.pyqtSignal(object)
-    stop     = QtCore.pyqtSignal()
+    progress = pyqtSignal(int)
+    complete = pyqtSignal(object)
+    stop     = pyqtSignal()
     
-class Transit(TransitLib, QtCore.QThread):
+class Transit(TransitLib, QThread):
 
     event = TransitEvent()    
     
