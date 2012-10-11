@@ -125,7 +125,7 @@ class ImportDialog(QDialog):
     def __init__(self):
         super(ImportDialog, self).__init__()
         self.setWindowTitle('Import...')
-        self.setWindowIcon(QIcon('assets/import.png'))
+        #self.setWindowIcon(QIcon('assets/import.png'))
         self.resize(400, 100)
         
         vbox = QVBoxLayout()
@@ -192,7 +192,7 @@ class ExportPlotDialog(QDialog):
     def __init__(self):
         super(ExportPlotDialog, self).__init__()
         self.setWindowTitle('Export plot')
-        self.setWindowIcon(QIcon('assets/export.png'))
+        #self.setWindowIcon(QIcon('assets/export.png'))
         self.resize(400, 200)
         
         
@@ -201,7 +201,7 @@ class ExportDatDialog(QFileDialog):
     def __init__(self):
         super(ExportDatDialog, self).__init__()
         self.setWindowTitle('Export DAT')
-        self.setWindowIcon(QIcon('assets/export.png'))
+        #self.setWindowIcon(QIcon('assets/export.png'))
         self.resize(500, 400)
         self.setFileMode(QFileDialog.AnyFile)
         fname = self.getSaveFileName(directory='export.dat', filter='DAT (*.dat);;')
