@@ -3,8 +3,6 @@
 # Packages
 *.egg
 *.egg-info
-dist
-build
 eggs
 parts
 bin
@@ -27,5 +25,7 @@ pip-log.txt
 .mr.developer.cfg
 
 /.spyderproject
-/build.bat
-/TransitGUI.spec
+*.log
+build/win32/pyi/build/
+build/win32/pyi/dist/
+build/win32/innosetup/dist/
