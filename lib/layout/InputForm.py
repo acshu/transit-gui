@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4.QtGui import QLabel, QDoubleSpinBox, QWidget, QPushButton, QVBoxLayout, QGridLayout, QGroupBox, QProgressBar
+from PyQt4.QtGui import QLabel, QDoubleSpinBox, QWidget, QPushButton, QVBoxLayout, QGridLayout, QGroupBox, QProgressBar, QComboBox
 from PyQt4.QtCore import Qt
 from ..Task import Task
 from ResultView import Plot
@@ -157,19 +157,47 @@ class InputForm(QWidget):
         self.grid.addWidget(self.inValue, 8, 1)
         self.grid.addWidget(self.inUnits, 8, 2)
         
-        # Darkening coefficient
-        self.dkLabel = QLabel('Darkening coefficient:')
-        self.dkValue = CustomDoubleSpinBox()
-        self.dkUnits = QLabel('')
-        self.dkValue.setRange(0, 1)
-        self.dkValue.setSingleStep(0.01)
-        self.dkValue.setDecimals(10)
-        self.dkValue.setAccelerated(True)
-        self.dkValue.setValue(0.2)
+        # Darkening law
+        self.dklLabel = QLabel('Darkening law:')
+        self.dklValue = QComboBox()
+        self.dklValue.addItem('Linear', 'linear')
+        self.dklValue.addItem('Quadratic', 'quadratic')
+        self.dklValue.addItem('Square root', 'squareroot')
+        self.dklValue.addItem('Logarithmic', 'logarithmic')
+        self.dklUnits = QLabel('')
+        
 
-        self.grid.addWidget(self.dkLabel, 9, 0)
-        self.grid.addWidget(self.dkValue, 9, 1)
-        self.grid.addWidget(self.dkUnits, 9, 2)
+        self.grid.addWidget(self.dklLabel, 9, 0)
+        self.grid.addWidget(self.dklValue, 9, 1)
+        self.grid.addWidget(self.dklUnits, 9, 2)
+        
+        # Darkening coefficient 1
+        self.dk1Label = QLabel('Darkening coefficient 1:')
+        self.dk1Value = CustomDoubleSpinBox()
+        self.dk1Units = QLabel('')
+        self.dk1Value.setRange(0, 1)
+        self.dk1Value.setSingleStep(0.01)
+        self.dk1Value.setDecimals(10)
+        self.dk1Value.setAccelerated(True)
+        self.dk1Value.setValue(0.2)
+
+        self.grid.addWidget(self.dk1Label, 10, 0)
+        self.grid.addWidget(self.dk1Value, 10, 1)
+        self.grid.addWidget(self.dk1Units, 10, 2)
+        
+        # Darkening coefficient 2
+        self.dk2Label = QLabel('Darkening coefficient 2:')
+        self.dk2Value = CustomDoubleSpinBox()
+        self.dk2Units = QLabel('')
+        self.dk2Value.setRange(0, 1)
+        self.dk2Value.setSingleStep(0.01)
+        self.dk2Value.setDecimals(10)
+        self.dk2Value.setAccelerated(True)
+        self.dk2Value.setValue(0.2)
+
+        self.grid.addWidget(self.dk2Label, 11, 0)
+        self.grid.addWidget(self.dk2Value, 11, 1)
+        self.grid.addWidget(self.dk2Units, 11, 2)
         
         # phase start
         self.pstLabel = QLabel('Phase start:')
@@ -180,8 +208,8 @@ class InputForm(QWidget):
         self.pstValue.setAccelerated(True)
         self.pstValue.setValue(0)
         
-        self.grid.addWidget(self.pstLabel, 10, 0)
-        self.grid.addWidget(self.pstValue, 10, 1)
+        self.grid.addWidget(self.pstLabel, 12, 0)
+        self.grid.addWidget(self.pstValue, 12, 1)
         
         # phase end
         self.penLabel = QLabel('Phase end:')
@@ -192,8 +220,8 @@ class InputForm(QWidget):
         self.penValue.setAccelerated(True)
         self.penValue.setValue(0.2)
         
-        self.grid.addWidget(self.penLabel, 11, 0)
-        self.grid.addWidget(self.penValue, 11, 1)
+        self.grid.addWidget(self.penLabel, 13, 0)
+        self.grid.addWidget(self.penValue, 13, 1)
         
         # phase step
         self.pspLabel = QLabel('Phase step:')
@@ -204,8 +232,8 @@ class InputForm(QWidget):
         self.pspValue.setAccelerated(True)
         self.pspValue.setValue(0.0001)
         
-        self.grid.addWidget(self.pspLabel, 12, 0)
-        self.grid.addWidget(self.pspValue, 12, 1)
+        self.grid.addWidget(self.pspLabel, 14, 0)
+        self.grid.addWidget(self.pspValue, 14, 1)
 
         # integration precision        
         self.pcLabel = QLabel('Intgration precision 10^?:')
@@ -214,8 +242,8 @@ class InputForm(QWidget):
         self.pcValue.setRange(-10, 0)
         self.pcValue.setValue(-1)
                 
-        self.grid.addWidget(self.pcLabel, 13, 0)
-        self.grid.addWidget(self.pcValue, 13, 1)
+        self.grid.addWidget(self.pcLabel, 15, 0)
+        self.grid.addWidget(self.pcValue, 15, 1)
         
         
         self._calculate = QPushButton('Calculate')
@@ -269,7 +297,9 @@ class InputForm(QWidget):
         task.input.planet_radius = self.prValue.value()
         task.input.star_temperature = self.stValue.value()
         task.input.planet_temperature = self.ptValue.value()
-        task.input.darkening = self.dkValue.value()
+        task.input.darkening_law = self.dklValue.itemData(self.dklValue.currentIndex()).toString();
+        task.input.darkening_1 = self.dk1Value.value()
+        task.input.darkening_2 = self.dk2Value.value()
         task.input.inclination = self.inValue.value()
         task.input.phase_start = self.pstValue.value()
         task.input.phase_end = self.penValue.value()
@@ -338,9 +368,15 @@ class InputForm(QWidget):
 
         if config.has_option('input', 'inclination'):
             self.inValue.setValue(config.getfloat('input', 'inclination'))            
+
+        if config.has_option('input', 'darkening_law'):
+            self.dklValue.setCurrentIndex(config.getint('input', 'darkening_law'))
             
-        if config.has_option('input', 'darkening'):
-            self.dkValue.setValue(config.getfloat('input', 'darkening'))
+        if config.has_option('input', 'darkening_1'):
+            self.dk1Value.setValue(config.getfloat('input', 'darkening_1'))
+            
+        if config.has_option('input', 'darkening_2'):
+            self.dk2Value.setValue(config.getfloat('input', 'darkening_2'))
             
         if config.has_option('input', 'phase_start'):
             self.pstValue.setValue(config.getfloat('input', 'phase_start'))
@@ -365,7 +401,9 @@ class InputForm(QWidget):
         config.set('input', 'star_temperature', self.stValue.value())
         config.set('input', 'planet_temperature', self.ptValue.value())
         config.set('input', 'inclination', self.inValue.value())
-        config.set('input', 'darkening', self.dkValue.value())
+        config.set('input', 'darkening_law', self.dklValue.currentIndex())
+        config.set('input', 'darkening_1', self.dk1Value.value())
+        config.set('input', 'darkening_2', self.dk2Value.value())
         config.set('input', 'phase_start', self.pstValue.value())
         config.set('input', 'phase_end', self.penValue.value())
         config.set('input', 'phase_step', self.pspValue.value())
