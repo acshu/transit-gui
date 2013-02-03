@@ -390,6 +390,7 @@ class InputForm(QWidget):
         if config.has_option('input', 'precision'):
             self.pcValue.setValue(config.getfloat('input', 'precision'))
             
+            
     
     def saveParams(self, filename):
         config = ConfigParser()
