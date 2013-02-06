@@ -7,7 +7,6 @@ Transit callculator GUI
 
 author: Anatoli Vladev
 email: avladev@gmail.com
-last edited: September 2012
 """
 
 import sys, os
@@ -105,7 +104,6 @@ def main():
     transit = TransitGUI()
     transit
     sys.exit(app.exec_())
-
 
 if __name__ == '__main__':
     main()

@@ -3,9 +3,10 @@
 from PyQt4.QtGui import QLabel, QDoubleSpinBox, QWidget, QPushButton, QVBoxLayout, QGridLayout, QGroupBox, QProgressBar, QComboBox
 from PyQt4.QtCore import Qt
 from ..Task import Task
-from ResultView import Plot
+from ResultView import Plot, ResidualPlot
 from ConfigParser import ConfigParser
 from os.path import exists
+from copy import copy
 
 class InputForm(QWidget):
 
@@ -198,30 +199,18 @@ class InputForm(QWidget):
         self.grid.addWidget(self.dk2Label, 11, 0)
         self.grid.addWidget(self.dk2Value, 11, 1)
         self.grid.addWidget(self.dk2Units, 11, 2)
-        
-        # phase start
-        self.pstLabel = QLabel('Phase start:')
-        self.pstValue = CustomDoubleSpinBox()
-        self.pstValue.setRange(0, 1)
-        self.pstValue.setSingleStep(0.01)
-        self.pstValue.setDecimals(10)
-        self.pstValue.setAccelerated(True)
-        self.pstValue.setValue(0)
-        
-        self.grid.addWidget(self.pstLabel, 12, 0)
-        self.grid.addWidget(self.pstValue, 12, 1)
-        
+                        
         # phase end
         self.penLabel = QLabel('Phase end:')
         self.penValue = CustomDoubleSpinBox()
-        self.penValue.setRange(0, 1)
+        self.penValue.setRange(0, 0.5)
         self.penValue.setSingleStep(0.01)
         self.penValue.setDecimals(10)
         self.penValue.setAccelerated(True)
         self.penValue.setValue(0.2)
         
-        self.grid.addWidget(self.penLabel, 13, 0)
-        self.grid.addWidget(self.penValue, 13, 1)
+        self.grid.addWidget(self.penLabel, 12, 0)
+        self.grid.addWidget(self.penValue, 12, 1)
         
         # phase step
         self.pspLabel = QLabel('Phase step:')
@@ -232,8 +221,8 @@ class InputForm(QWidget):
         self.pspValue.setAccelerated(True)
         self.pspValue.setValue(0.0001)
         
-        self.grid.addWidget(self.pspLabel, 14, 0)
-        self.grid.addWidget(self.pspValue, 14, 1)
+        self.grid.addWidget(self.pspLabel, 13, 0)
+        self.grid.addWidget(self.pspValue, 13, 1)
 
         # integration precision        
         self.pcLabel = QLabel('Intgration precision 10^?:')
@@ -242,8 +231,8 @@ class InputForm(QWidget):
         self.pcValue.setRange(-10, 0)
         self.pcValue.setValue(-1)
                 
-        self.grid.addWidget(self.pcLabel, 15, 0)
-        self.grid.addWidget(self.pcValue, 15, 1)
+        self.grid.addWidget(self.pcLabel, 14, 0)
+        self.grid.addWidget(self.pcValue, 14, 1)
         
         
         self._calculate = QPushButton('Calculate')
@@ -301,13 +290,13 @@ class InputForm(QWidget):
         task.input.darkening_1 = self.dk1Value.value()
         task.input.darkening_2 = self.dk2Value.value()
         task.input.inclination = self.inValue.value()
-        task.input.phase_start = self.pstValue.value()
+        task.input.phase_start = 0
         task.input.phase_end = self.penValue.value()
         task.input.phase_step = self.pspValue.value()
         task.input.precision = 10**self.pcValue.value()
         
         if len(Plot.instance().import_phases):
-            task.input.phases_injection = Plot.instance().import_phases
+            task.input.phases_injection = copy(Plot.instance().import_phases)
         
         task.event.start.connect(self._onTaskStart)
         task.event.progress.connect(self._onTaskProgress)
@@ -331,8 +320,11 @@ class InputForm(QWidget):
         self._progress.setValue(0)
         self._cancel.hide()
         self._group.setDisabled(False)
+
+                
         Plot.instance().setResult(result.phases, result.values)
         Plot.instance().redraw()
+        ResidualPlot.instance().redraw()
         
     def _onStop(self):
         print 'Stop'
@@ -378,9 +370,6 @@ class InputForm(QWidget):
         if config.has_option('input', 'darkening_2'):
             self.dk2Value.setValue(config.getfloat('input', 'darkening_2'))
             
-        if config.has_option('input', 'phase_start'):
-            self.pstValue.setValue(config.getfloat('input', 'phase_start'))
-            
         if config.has_option('input', 'phase_end'):
             self.penValue.setValue(config.getfloat('input', 'phase_end'))
             
@@ -405,7 +394,6 @@ class InputForm(QWidget):
         config.set('input', 'darkening_law', self.dklValue.currentIndex())
         config.set('input', 'darkening_1', self.dk1Value.value())
         config.set('input', 'darkening_2', self.dk2Value.value())
-        config.set('input', 'phase_start', self.pstValue.value())
         config.set('input', 'phase_end', self.penValue.value())
         config.set('input', 'phase_step', self.pspValue.value())
         config.set('input', 'precision', self.pcValue.value())
