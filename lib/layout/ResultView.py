@@ -34,18 +34,18 @@ class ResultPlot(QWidget):
         self.residual_plot.setFixedHeight(150)
         vbox.addWidget(self.residual_plot)
 
-        self.toolbar = QHBoxLayout()
-        self.toolbar.setAlignment(Qt.AlignRight)
+        #self.toolbar = QHBoxLayout()
+        #self.toolbar.setAlignment(Qt.AlignRight)
 
-        self.toolbar_import = QPushButton('Import observation...')
-        self.toolbar_import.clicked.connect(self.onImport)
-        self.toolbar.addWidget(self.toolbar_import)
+        #self.toolbar_import = QPushButton('Import observation...')
+        #self.toolbar_import.clicked.connect(self.onImport)
+        #self.toolbar.addWidget(self.toolbar_import)
 
         #self.toolbar_exportplot = QPushButton('Export')
         #self.toolbar_exportplot.clicked.connect(self.onExportPlot)
         #self.toolbar.addWidget(self.toolbar_exportplot)
         
-        vbox.addLayout(self.toolbar)
+        #vbox.addLayout(self.toolbar)
         self.setLayout(vbox)
         
     def onExportPlot(self):
@@ -215,7 +215,7 @@ class ResidualPlot(FigureCanvas):
         self.axes.grid(False)
         self.figure.set_alpha(0)
         self.axes.set_xlabel('Phase')
-        self.axes.set_ylabel(r'$\Delta$Flux')
+        self.axes.set_ylabel('Residual')
         
                         
                         
@@ -254,7 +254,7 @@ class ResidualPlot(FigureCanvas):
         
         self.axes.axhline(y=0, ls='--', linewidth=0.5, color='black')
         self.axes.scatter(dphases, dfluxes, s=0.5, color='r')
-        self.axes.text(0.98, 0.95, r'$\chi^2$= ' + str(chi2), color=color, horizontalalignment='right', verticalalignment='top', transform = self.axes.transAxes)
+        self.axes.text(0.98, 0.95, 'chi^2= ' + str(chi2), color=color, horizontalalignment='right', verticalalignment='top', transform = self.axes.transAxes)
         self.draw()
         
         
@@ -308,7 +308,7 @@ class ImportDialog(QDialog):
         grid.addWidget(self.mmax, 2, 1)
                 
         
-        self.son = QCheckBox('Convert JD to phases')
+        self.son = QCheckBox('Convert HJD to phases')
         self.son.stateChanged.connect(self._onJDTCheck)
         grid.addWidget(self.son, 4, 0, 1, 0)
         
@@ -322,8 +322,6 @@ class ImportDialog(QDialog):
         self.tzero.setMinimum(0)
         self.tzero.setFixedWidth(120)
         self.tzero.setRange(0, sys.float_info.max)
-        # remove
-        self.tzero.setValue(2454420.44437)
         grid.addWidget(self.tzerol, 5, 0)
         grid.addWidget(self.tzero, 5, 1)
         
@@ -334,8 +332,6 @@ class ImportDialog(QDialog):
         self.period.setDisabled(True)
         self.period.setRange(0, sys.float_info.max)
         self.period.setDecimals(10)
-        # remove
-        self.period.setValue(2.150008)
         grid.addWidget(self.periodl, 6, 0)
         grid.addWidget(self.period, 6, 1)
         
@@ -414,7 +410,7 @@ class ImportDialog(QDialog):
             if self.mon.checkState() == Qt.Checked :
                 for (index, value) in enumerate(result.values):
                     print value
-                    result.values[index] = 10**(-(self.mmax.value() - value)/2.5)  
+                    result.values[index] = 10**(-(value - self.mmax.value())/2.5)  
                 
 
             phases = copy(result.phases)

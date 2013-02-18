@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4.QtGui import QLabel, QDoubleSpinBox, QWidget, QPushButton, QVBoxLayout, QGridLayout, QGroupBox, QProgressBar, QComboBox
-from PyQt4.QtCore import Qt
+from PyQt4.QtGui import QLabel, QCheckBox, QFileDialog, QDoubleSpinBox, QWidget, QPushButton, QMessageBox, QVBoxLayout, QGridLayout, QGroupBox, QProgressBar, QComboBox
+from PyQt4.QtCore import Qt, QString
 from ..Task import Task
 from ResultView import Plot, ResidualPlot
 from ConfigParser import ConfigParser
 from os.path import exists
 from copy import copy
+import sys, os
+from ..Task import TaskImporter
 
 class InputForm(QWidget):
 
@@ -27,6 +29,7 @@ class InputForm(QWidget):
         super(InputForm, self).__init__()
         
         self._changeFromSignal = False
+        self.filename = None
 
         self.vbox = QVBoxLayout()
         self.vbox.setContentsMargins(0,0,0,0)
@@ -225,7 +228,7 @@ class InputForm(QWidget):
         self.grid.addWidget(self.pspValue, 13, 1)
 
         # integration precision        
-        self.pcLabel = QLabel('Intgration precision 10^?:')
+        self.pcLabel = QLabel('Integration precision 10^?:')
         self.pcValue = CustomDoubleSpinBox()
         self.pcValue.setDecimals(0)
         self.pcValue.setRange(-10, 0)
@@ -235,6 +238,77 @@ class InputForm(QWidget):
         self.grid.addWidget(self.pcValue, 14, 1)
         
         
+        igrid = QGridLayout()        
+        igrid.setAlignment(Qt.AlignTop)
+        igrid.setColumnStretch(1,1)
+
+        vbox = QVBoxLayout()
+        vbox.setAlignment(Qt.AlignTop)
+        
+        self._igroup = QGroupBox()
+        self._igroup.setTitle('Import settings')
+        self._igroup.setLayout(igrid)
+        vbox.addWidget(self._igroup)
+        
+
+        self.fnameLabel = QLabel('No file selected')
+        fbrowse = QPushButton('Browse...')
+        fbrowse.setFixedWidth(105)
+        fbrowse.clicked.connect(self._onImportBrowse)
+        igrid.addWidget(self.fnameLabel, 1, 0, 1, 0)
+        igrid.addWidget(fbrowse, 1, 3)
+                
+        
+        self.son = QCheckBox('Convert HJD to phases')
+        self.son.stateChanged.connect(self._onJDTCheck)
+        igrid.addWidget(self.son, 2, 0, 1, 0)
+        
+        self.tzerol = QLabel('T<sub>0</sub>')
+        self.tzerol.setFixedWidth(20)
+        self.tzero = CustomDoubleSpinBox()
+        self.tzero.setSingleStep(0.01)
+        self.tzero.setDecimals(10)
+        self.tzero.setAccelerated(True)
+        self.tzero.setDisabled(True)
+        self.tzero.setMinimum(0)
+        self.tzero.setFixedWidth(105)
+        self.tzero.setRange(0, sys.float_info.max)
+        igrid.addWidget(self.tzerol, 3, 0)
+        igrid.addWidget(self.tzero, 3, 1)
+        
+        self.periodl = QLabel('P')
+        self.periodl.setFixedWidth(20)
+        self.period = CustomDoubleSpinBox()
+        self.period.setFixedWidth(100)
+        self.period.setDisabled(True)
+        self.period.setRange(0, sys.float_info.max)
+        self.period.setDecimals(10)
+        igrid.addWidget(self.periodl, 3, 2)
+        igrid.addWidget(self.period, 3, 3)
+        
+        self.mon = QCheckBox('Convert magnitude to flux')
+        self.mon.stateChanged.connect(self._onMagCheck)
+        igrid.addWidget(self.mon, 4, 0, 1, 0)
+
+        self.mmaxl = QLabel('Mag')
+        self.mmax = CustomDoubleSpinBox()
+        self.mmax.setSingleStep(0.01)
+        self.mmax.setDecimals(10)
+        self.mmax.setAccelerated(True)
+        self.mmax.setDisabled(True)
+        self.mmax.setMinimum(0)
+        self.mmax.setFixedWidth(105)
+        igrid.addWidget(self.mmaxl, 5, 0)
+        igrid.addWidget(self.mmax, 5, 1)
+        
+        self.redraw = QPushButton("Redraw")
+        self.redraw.clicked.connect(self._onRedraw)
+        igrid.addWidget(self.redraw, 5,3)
+        
+        
+        self.vbox.addWidget(self._igroup)
+
+
         self._calculate = QPushButton('Calculate')
         self._calculate.clicked.connect(self._onCalculate)
         self.vbox.addWidget(self._calculate) 
@@ -277,8 +351,94 @@ class InputForm(QWidget):
             self._changeFromSignal = True
             self.prValue.setValue(value*InputForm.JUPITER_RADIUS/InputForm.AU)
             self._changeFromSignal = False
+            
+    def _onJDTCheck(self, state):
+        if state == Qt.Checked :
+            self.tzero.setDisabled(False)
+            self.period.setDisabled(False)
+        else:
+            self.tzero.setDisabled(True)
+            self.period.setDisabled(True)
+        pass
+    
+    def _onMagCheck(self, state):
+        if state == Qt.Checked :
+            self.mmax.setDisabled(False)
+        else:
+            self.mmax.setDisabled(True)
+        pass
+                        
+        
+    def _onImportBrowse(self):
+        
+        directory = "" if self.filename is None else QString(str("/").join(self.filename.split("/")[:-1]))
+        types = TaskImporter.getFormats()
+        filters = []
+        
+        for value in types :
+            filters.append(value.upper() + " (*." + value + ")")
+            
+        filters.append("All files (*.*)")
+        
+        self.filename = QFileDialog.getOpenFileName(self, 'Open file', directory=directory, filter=";;".join(filters))
+        
+        self._updateFileLabel()
+        
+    def _updateFileLabel(self):
+        if self.filename :
+            self.fnameLabel.setText(self.filename.split("/")[-1])
+        else:
+            self.fnameLabel.setText('No file selected')
+        pass
+            
+    def _importObservation(self):
+        if self.filename is None:
+            return
+            
+        try:
+            result = TaskImporter.loadFile(self.filename)
+            
+            # convert JD time to phases
+            if self.son.checkState() == Qt.Checked :
+                if self.tzero.value() <= 0 :
+                    QMessageBox.warning(self, "Error", 'Invalid parameter "T<sub>0</sub>"!')
+                    return
+                    
+                if self.period.value() <= 0 :
+                    QMessageBox.warning(self, "Error", 'Invalid parameter "P"!')
+                    return
+                    
+                for (index, phase) in enumerate(result.phases):
+                    result.phases[index] = (phase - self.tzero.value()) / self.period.value() % 1;
+            
+            
+            # convert magnitude to flux
+            if self.mon.checkState() == Qt.Checked :
+                for (index, value) in enumerate(result.values):
+                    result.values[index] = 10**(-(value - self.mmax.value())/2.5)  
+                
+
+            phases = copy(result.phases)
+            values = copy(result.values)
+            
+            for (index, phase) in enumerate(result.phases):
+                if phase > 0.5 :
+                    phases[index] = phase - 1
+                        
+            Plot.instance().setImport(phases, values)
+            Plot.instance().redraw()
+            
+        except:
+            QMessageBox.critical(self, "Import error", "Error importing data!")
+            raise
+            
+    def _onRedraw(self):
+        self._importObservation()
+        pass
         
     def _onCalculate(self):
+
+        self._importObservation()
 
         task = Task()        
         task.input.semi_major_axis = self.smaValue.value()
@@ -310,6 +470,7 @@ class InputForm(QWidget):
         self._progress.setValue(0)
         self._cancel.show()
         self._group.setDisabled(True)
+        self._igroup.setDisabled(True)
         
     def _onTaskProgress(self, progress):
         self._progress.setValue(progress)
@@ -320,6 +481,8 @@ class InputForm(QWidget):
         self._progress.setValue(0)
         self._cancel.hide()
         self._group.setDisabled(False)
+        self._igroup.setDisabled(False)
+        
 
                 
         Plot.instance().setResult(result.phases, result.values)
@@ -338,6 +501,7 @@ class InputForm(QWidget):
         self._progress.setValue(0)
         self._cancel.hide()
         self._group.setDisabled(False)
+        self._igroup.setDisabled(False)
         
     def loadParams(self, filename):
         config = ConfigParser()
@@ -378,6 +542,27 @@ class InputForm(QWidget):
             
         if config.has_option('input', 'precision'):
             self.pcValue.setValue(config.getfloat('input', 'precision'))
+
+
+
+        if config.has_option('import', 'filename') :
+            self.filename = os.getcwd().replace('\\', '/') + config.get('import', 'filename')
+            self._updateFileLabel();
+
+        if config.has_option('import', 'jd2phase') and config.getboolean('import', 'jd2phase') == True :
+            self.son.setCheckState(Qt.Checked)
+            
+        if config.has_option('import', 'jd2phase_tzero') :
+            self.tzero.setValue(config.getfloat('import', 'jd2phase_tzero'))
+            
+        if config.has_option('import', 'jd2phase_period') :
+            self.period.setValue(config.getfloat('import', 'jd2phase_period'))
+            
+        if config.has_option('import', 'mag2flux') and config.getboolean('import', 'mag2flux') == True :
+            self.mon.setCheckState(Qt.Checked)
+            
+        if config.has_option('import', 'mag2flux_mag') :
+            self.mmax.setValue(config.getfloat('import', 'mag2flux_mag'))
             
             
     
@@ -397,6 +582,14 @@ class InputForm(QWidget):
         config.set('input', 'phase_end', self.penValue.value())
         config.set('input', 'phase_step', self.pspValue.value())
         config.set('input', 'precision', self.pcValue.value())
+        
+        config.add_section('import')
+        config.set('import', 'filename', str(self.filename).replace(os.getcwd().replace('\\', '/'), ''))
+        config.set('import', 'jd2phase', self.son.checkState() == Qt.Checked)
+        config.set('import', 'jd2phase_tzero', self.tzero.value())
+        config.set('import', 'jd2phase_period', self.period.value())
+        config.set('import', 'mag2flux', self.mon.checkState() == Qt.Checked)
+        config.set('import', 'mag2flux_mag', self.mmax.value())
         
         with open(filename, 'wb') as configfile:
             config.write(configfile)

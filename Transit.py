@@ -11,7 +11,7 @@ email: avladev@gmail.com
 
 import sys, os
 os.environ['MPLCONFIGDIR'] = os.getcwd() + "/config/"
-from PyQt4.QtGui import QApplication, QMainWindow, QAction, QFileDialog, QMessageBox, QDesktopWidget
+from PyQt4.QtGui import QApplication, QMainWindow, QAction, QFileDialog, QMessageBox, QDesktopWidget, QIcon
 from PyQt4.QtCore import QLocale
 from lib.layout.Layout import Layout
 from lib.Logger import logger
@@ -28,9 +28,9 @@ class TransitGUI(QMainWindow):
         self.setLocale(QLocale(QLocale.C))
         logger.info('Init UI')
         self.setCentralWidget(Layout())
-        self.setGeometry(300, 300, 800, 450)
+        self.setGeometry(200, 200, 1024, 600)
         self.setWindowTitle('Transit')
-        #self.setWindowIcon(QIcon('assets/icon.png')) 
+        self.setWindowIcon(QIcon('assets/icon.png')) 
 
         self.init_menu()
 
