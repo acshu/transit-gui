@@ -32,3 +32,4 @@ build/win32/innosetup/dist/
 config/fontList.cache
 config/last-session.ini
 config/tex.cache
+/stuff
