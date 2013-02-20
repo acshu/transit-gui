@@ -28,7 +28,7 @@ class TransitGUI(QMainWindow):
         self.setLocale(QLocale(QLocale.C))
         logger.info('Init UI')
         self.setCentralWidget(Layout())
-        self.setGeometry(200, 200, 1024, 600)
+        self.setGeometry(0, 0, 800, 600)
         self.setWindowTitle('Transit')
         self.setWindowIcon(QIcon('assets/icon.png')) 
 
@@ -38,6 +38,7 @@ class TransitGUI(QMainWindow):
         center = QDesktopWidget().availableGeometry().center()
         frame_geometry.moveCenter(center)
         self.move(frame_geometry.topLeft())
+        self.showMaximized()
 
         self.statusBar().showMessage('Ready')
         self.show()

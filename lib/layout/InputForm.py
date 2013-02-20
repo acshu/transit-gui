@@ -29,7 +29,7 @@ class InputForm(QWidget):
         super(InputForm, self).__init__()
         
         self._changeFromSignal = False
-        self.filename = None
+        self.filename = ''
 
         self.vbox = QVBoxLayout()
         self.vbox.setContentsMargins(0,0,0,0)
@@ -252,11 +252,16 @@ class InputForm(QWidget):
         
 
         self.fnameLabel = QLabel('No file selected')
-        fbrowse = QPushButton('Browse...')
-        fbrowse.setFixedWidth(105)
-        fbrowse.clicked.connect(self._onImportBrowse)
+        self.fbrowse = QPushButton('Browse...')
+        self.fbrowse.setFixedWidth(105)
+        self.fbrowse.clicked.connect(self._onImportBrowse)
+        self.fclear = QPushButton('Clear')
+        self.fclear.setFixedWidth(105)
+        self.fclear.clicked.connect(self._onImportClear)
+        self.fclear.setHidden(True)
         igrid.addWidget(self.fnameLabel, 1, 0, 1, 0)
-        igrid.addWidget(fbrowse, 1, 3)
+        igrid.addWidget(self.fbrowse, 1, 3)
+        igrid.addWidget(self.fclear, 1, 3)
                 
         
         self.son = QCheckBox('Convert HJD to phases')
@@ -271,7 +276,7 @@ class InputForm(QWidget):
         self.tzero.setAccelerated(True)
         self.tzero.setDisabled(True)
         self.tzero.setMinimum(0)
-        self.tzero.setFixedWidth(105)
+        self.tzero.setFixedWidth(230)
         self.tzero.setRange(0, sys.float_info.max)
         igrid.addWidget(self.tzerol, 3, 0)
         igrid.addWidget(self.tzero, 3, 1)
@@ -279,16 +284,16 @@ class InputForm(QWidget):
         self.periodl = QLabel('P')
         self.periodl.setFixedWidth(20)
         self.period = CustomDoubleSpinBox()
-        self.period.setFixedWidth(100)
+        self.period.setFixedWidth(230)
         self.period.setDisabled(True)
         self.period.setRange(0, sys.float_info.max)
         self.period.setDecimals(10)
-        igrid.addWidget(self.periodl, 3, 2)
-        igrid.addWidget(self.period, 3, 3)
+        igrid.addWidget(self.periodl, 4, 0)
+        igrid.addWidget(self.period, 4, 1)
         
         self.mon = QCheckBox('Convert magnitude to flux')
         self.mon.stateChanged.connect(self._onMagCheck)
-        igrid.addWidget(self.mon, 4, 0, 1, 0)
+        igrid.addWidget(self.mon, 5, 0, 1, 0)
 
         self.mmaxl = QLabel('Mag')
         self.mmax = CustomDoubleSpinBox()
@@ -298,12 +303,12 @@ class InputForm(QWidget):
         self.mmax.setDisabled(True)
         self.mmax.setMinimum(0)
         self.mmax.setFixedWidth(105)
-        igrid.addWidget(self.mmaxl, 5, 0)
-        igrid.addWidget(self.mmax, 5, 1)
+        igrid.addWidget(self.mmaxl, 6, 0)
+        igrid.addWidget(self.mmax, 6, 1)
         
         self.redraw = QPushButton("Redraw")
         self.redraw.clicked.connect(self._onRedraw)
-        igrid.addWidget(self.redraw, 5,3)
+        igrid.addWidget(self.redraw, 6,3)
         
         
         self.vbox.addWidget(self._igroup)
@@ -371,7 +376,7 @@ class InputForm(QWidget):
         
     def _onImportBrowse(self):
         
-        directory = "" if self.filename is None else QString(str("/").join(self.filename.split("/")[:-1]))
+        directory = "" if self.filename is None else QString(str("/").join(str(self.filename).split("/")[:-1]))
         types = TaskImporter.getFormats()
         filters = []
         
@@ -384,15 +389,27 @@ class InputForm(QWidget):
         
         self._updateFileLabel()
         
+    def _onImportClear(self):
+        self.filename = ''
+        Plot.instance().setResult([], [])
+        Plot.instance().setImport([], [])
+        Plot.instance().redraw()
+        ResidualPlot.instance().redraw()
+        self._updateFileLabel();
+        
     def _updateFileLabel(self):
         if self.filename :
             self.fnameLabel.setText(self.filename.split("/")[-1])
+            self.fclear.setHidden(False)
+            self.redraw.setDisabled(False)
         else:
             self.fnameLabel.setText('No file selected')
+            self.fclear.setHidden(True)
+            self.redraw.setDisabled(True)
         pass
             
     def _importObservation(self):
-        if self.filename is None:
+        if not self.filename :
             return
             
         try:
@@ -433,10 +450,14 @@ class InputForm(QWidget):
             raise
             
     def _onRedraw(self):
+        if not self.filename :
+            QMessageBox.warning(self, "Import file", "Please import file first")
+            return
         self._importObservation()
         pass
         
     def _onCalculate(self):
+
 
         self._importObservation()
 
@@ -545,9 +566,10 @@ class InputForm(QWidget):
 
 
 
-        if config.has_option('import', 'filename') :
+        if config.has_option('import', 'filename') and config.get('import', 'filename') :
             self.filename = os.getcwd().replace('\\', '/') + config.get('import', 'filename')
-            self._updateFileLabel();
+            
+        self._updateFileLabel();
 
         if config.has_option('import', 'jd2phase') and config.getboolean('import', 'jd2phase') == True :
             self.son.setCheckState(Qt.Checked)

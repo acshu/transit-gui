@@ -2,8 +2,7 @@
 
 import sys
 import csv
-import math
-from PyQt4.QtGui import QHBoxLayout, QVBoxLayout, QGridLayout, QCheckBox, QAbstractItemView, QDoubleSpinBox, QFileDialog, QMessageBox, QGroupBox, QLabel, QIcon, QDialog, QWidget, QTableWidget, QTableWidgetItem, QTabWidget, QPushButton, QPalette, QSizePolicy
+from PyQt4.QtGui import QLineEdit, QColor, QMenu, QHBoxLayout, QVBoxLayout, QGridLayout, QCheckBox, QAbstractItemView, QDoubleSpinBox, QFileDialog, QMessageBox, QGroupBox, QLabel, QDialog, QWidget, QTableWidget, QTableWidgetItem, QTabWidget, QPushButton, QPalette, QSizePolicy
 from PyQt4.QtCore import Qt, QString, QLocale
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -33,7 +32,20 @@ class ResultPlot(QWidget):
         self.residual_plot = ResidualPlot()
         self.residual_plot.setFixedHeight(150)
         vbox.addWidget(self.residual_plot)
-
+        
+        self.chihbox = QHBoxLayout()
+        self.chihbox.setAlignment(Qt.AlignHCenter)
+        self.chi2Label = QLabel('chi^2')
+        self.chi2Label.setFixedWidth(30)
+        self.chi2Label.hide();
+        self.chi2Value = QLineEdit()
+        self.chi2Value.setAlignment(Qt.AlignRight)
+        self.chi2Value.setFixedWidth(120)
+        self.chi2Value.hide()
+        self.chihbox.addWidget(self.chi2Label)
+        self.chihbox.addWidget(self.chi2Value)
+        vbox.addLayout(self.chihbox)
+                
         #self.toolbar = QHBoxLayout()
         #self.toolbar.setAlignment(Qt.AlignRight)
 
@@ -85,7 +97,6 @@ class Plot(FigureCanvas):
         self.figure.hold(False)
         super(Plot, self).__init__(self.figure)
         
-        
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.updateGeometry()
         
@@ -113,6 +124,7 @@ class Plot(FigureCanvas):
         self.import_phases = phases
         self.import_values = values
         
+        
     def redraw(self):
         if not self.import_phases :
             ResultTable.instance().setData(self.result_phases, self.result_values, [], [])
@@ -126,7 +138,7 @@ class Plot(FigureCanvas):
         
         result_phases = copy(self.result_phases)
         result_values = copy(self.result_values)
-        
+                        
         for (index, phase) in enumerate(self.result_phases):
             if phase > 0.5 :
                 del_index = result_phases.index(phase)
@@ -141,6 +153,9 @@ class Plot(FigureCanvas):
             
         import_phases = copy(self.import_phases)
         import_values = copy(self.import_values)
+        
+        if not result_phases and not import_phases :
+            return
         
         if result_values :
             ymin = min(result_values)
@@ -191,7 +206,7 @@ class ResidualPlot(FigureCanvas):
         
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.updateGeometry()
-        self.hide()
+        self.hide()        
         
     @staticmethod
     def instance():
@@ -206,10 +221,14 @@ class ResidualPlot(FigureCanvas):
         self.clear()
         
         if len(Plot.instance().result_import_phases) == 0 :
+            self.parent().chi2Label.hide()
+            self.parent().chi2Value.hide()
             self.hide()
             return
 
-        self.show()        
+        self.show()
+        self.parent().chi2Label.show()
+        self.parent().chi2Value.show()
         
         self.axes = self.figure.add_subplot(1, 1, 1)
         self.axes.grid(False)
@@ -241,20 +260,25 @@ class ResidualPlot(FigureCanvas):
             
         self.chi2s.append(chi2) 
         
-        color = 'black'
+        color = QColor(0,0,0)
         minChi2 = min(self.chi2s)
         if len(self.chi2s) == 1 :
-            color = 'black'
+            color = QColor(0,0,0)
         elif chi2 <= minChi2 :
-            color = 'green'
+            color = QColor(0,139,0)
         else:
-            color = 'red'
+            color = QColor(255,0,0)
             
         ResultTable.instance().setData(Plot.instance().result_phases, Plot.instance().result_values, Plot.instance().import_phases, Plot.instance().import_values)
         
         self.axes.axhline(y=0, ls='--', linewidth=0.5, color='black')
         self.axes.scatter(dphases, dfluxes, s=0.5, color='r')
-        self.axes.text(0.98, 0.95, 'chi^2= ' + str(chi2), color=color, horizontalalignment='right', verticalalignment='top', transform = self.axes.transAxes)
+        #self.axes.text(0.98, 0.95, 'chi^2= ' + str(chi2), color=color, horizontalalignment='right', verticalalignment='top', transform = self.axes.transAxes)
+        palette = self.parent().chi2Value.palette()
+        palette.setColor(QPalette.Active, QPalette.Text, color)
+        self.parent().chi2Value.setPalette(palette)
+        self.parent().chi2Value.setText(str(chi2))
+        
         self.draw()
         
         
@@ -409,14 +433,12 @@ class ImportDialog(QDialog):
             # convert magnitude to flux
             if self.mon.checkState() == Qt.Checked :
                 for (index, value) in enumerate(result.values):
-                    print value
                     result.values[index] = 10**(-(value - self.mmax.value())/2.5)  
                 
 
             phases = copy(result.phases)
             values = copy(result.values)
             
-            print values
             
             for (index, phase) in enumerate(result.phases):
                 if phase > 0.5 :
@@ -443,18 +465,18 @@ class ExportPlotDialog(QDialog):
         
 class ExportDatDialog(QFileDialog):
     
-    def __init__(self, phases, values, import_phases, import_values):
+    def __init__(self, phases, values, import_phases, import_values, separator):
         super(ExportDatDialog, self).__init__()
         self.setWindowTitle('Export DAT')
         #self.setWindowIcon(QIcon('assets/export.png'))
         self.resize(500, 400)
         self.setFileMode(QFileDialog.AnyFile)
         fname = self.getSaveFileName(directory='result.dat', filter='DAT (*.dat);;')
-        
+                
         try:
             
             with open(fname, 'wb') as csvfile:
-                csv_writter = csv.writer(csvfile, delimiter="\t")
+                csv_writter = csv.writer(csvfile, delimiter=separator)
                 for index, phase in enumerate(phases):
                     row = []
                     row.append('%.12f' % phase)
@@ -511,7 +533,11 @@ class ResultTable(QWidget):
         bhbox = QHBoxLayout()
         bhbox.setAlignment(Qt.AlignRight)
         bexport = QPushButton('Export...')
-        bexport.clicked.connect(self._onExport)
+        bexport_menu = QMenu()
+        bexport_menu.addAction('\\t separated').triggered.connect(lambda : self._onExport('\t'))
+        bexport_menu.addAction(', separated').triggered.connect(lambda : self._onExport(','))
+        bexport_menu.addAction('; separated').triggered.connect(lambda : self._onExport(';'))
+        bexport.setMenu(bexport_menu)        
         bhbox.addWidget(bexport)
         
         self.vbox.addLayout(bhbox)    
@@ -519,17 +545,31 @@ class ResultTable(QWidget):
         self.setLayout(self.vbox)
         
     def setData(self, phases, values, import_phases, import_values):
-        self.phases = phases
-        self.values = values
-        self.import_phases = import_phases
-        self.import_values = import_values
-        self.table.setRowCount(len(phases))
+        
+        self.phases = []
+        self.values = []
         
         for (index, phase) in enumerate(phases):
+            if phase == 0 :
+                continue
+            
+            self.phases.insert(0, -phase)
+            self.values.insert(0, values[index])
+                   
+        for (index, phase) in enumerate(phases):
+            self.phases.append(phase)
+            self.values.append(values[index])
+            
+        self.import_phases = import_phases
+        self.import_values = import_values
+        
+        self.table.setRowCount(len(self.phases))
+
+        for (index, phase) in enumerate(self.phases):
             phase_item = QTableWidgetItem('%.12f' % phase)
             phase_item.setTextAlignment(Qt.AlignRight)
 
-            value_item = QTableWidgetItem('%.12f' % values[index])
+            value_item = QTableWidgetItem('%.12f' % self.values[index])
             value_item.setTextAlignment(Qt.AlignRight)
             self.table.setItem(index, 0, phase_item)
             self.table.setItem(index, 1, value_item)
@@ -540,14 +580,14 @@ class ResultTable(QWidget):
                 ivalue_item = QTableWidgetItem('%.12f' % import_values[import_index])
                 ivalue_item.setTextAlignment(Qt.AlignRight)
                 
-                idflux_item = QTableWidgetItem('%.12f' % (import_values[import_index] - values[index]))
+                idflux_item = QTableWidgetItem('%.12f' % (import_values[import_index] - self.values[index]))
                 idflux_item.setTextAlignment(Qt.AlignRight)
                 
                 self.table.setItem(index, 2, ivalue_item)
                 self.table.setItem(index, 3, idflux_item)
         
-    def _onExport(self):
-        self.export = ExportDatDialog(self.phases, self.values, self.import_phases, self.import_values)
+    def _onExport(self, separator):
+        self.export = ExportDatDialog(self.phases, self.values, self.import_phases, self.import_values, separator)
         pass
     
     @staticmethod
