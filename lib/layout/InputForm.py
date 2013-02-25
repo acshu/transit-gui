@@ -446,7 +446,7 @@ class InputForm(QWidget):
             Plot.instance().redraw()
             
         except:
-            QMessageBox.critical(self, "Import error", "Error importing data!")
+            QMessageBox.critical(self, "Import error", "Error importing data!\nError: " + str(sys.exc_info()[1]))
             raise
             
     def _onRedraw(self):
@@ -567,7 +567,10 @@ class InputForm(QWidget):
 
 
         if config.has_option('import', 'filename') and config.get('import', 'filename') :
-            self.filename = os.getcwd().replace('\\', '/') + config.get('import', 'filename')
+            if '/data/' in config.get('import', 'filename') and config.get('import', 'filename').index('/data/') == 0 :
+                self.filename = os.getcwd().replace('\\', '/') + config.get('import', 'filename')
+            else:
+                self.filename = config.get('import', 'filename')
             
         self._updateFileLabel();
 
@@ -606,7 +609,13 @@ class InputForm(QWidget):
         config.set('input', 'precision', self.pcValue.value())
         
         config.add_section('import')
-        config.set('import', 'filename', str(self.filename).replace(os.getcwd().replace('\\', '/'), ''))
+        print self.filename
+        if os.getcwd().replace('\\', '/') in str(self.filename) and str(self.filename).index(os.getcwd().replace('\\', '/')) == 0 :
+            saveFilePath = str(self.filename).replace(os.getcwd().replace('\\', '/'), '')
+        else:
+            saveFilePath = str(self.filename)
+            
+        config.set('import', 'filename', saveFilePath)
         config.set('import', 'jd2phase', self.son.checkState() == Qt.Checked)
         config.set('import', 'jd2phase_tzero', self.tzero.value())
         config.set('import', 'jd2phase_period', self.period.value())

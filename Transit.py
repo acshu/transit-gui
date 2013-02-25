@@ -79,7 +79,7 @@ class TransitGUI(QMainWindow):
             filename = str(QFileDialog.getOpenFileName(self, 'Open file', directory="./data", filter="INI (*.ini);;All files (*.*)"))
             InputForm.instance().loadParams(filename)
         except Exception:
-            QMessageBox.warning(self, "Error", "Error reading ini file!")
+            QMessageBox.warning(self, "Error", "Error reading ini file!\nError: " + str(sys.exc_info()[1]))
     
     def on_save(self):
         """
@@ -89,7 +89,7 @@ class TransitGUI(QMainWindow):
             filename = str(QFileDialog.getSaveFileName(self, 'Open file', directory="./data", filter="INI (*.ini);;All files (*.*)"))
             InputForm.instance().saveParams(filename)
         except Exception:
-            QMessageBox.warning(self, "Error", "Error saving ini file!")
+            QMessageBox.warning(self, "Error", "Error saving ini file!\nError: " + str(sys.exc_info()[1]))
     
     @staticmethod
     def closeEvent(cls):

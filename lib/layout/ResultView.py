@@ -156,16 +156,26 @@ class Plot(FigureCanvas):
         
         if not result_phases and not import_phases :
             return
+        yrmin = 1
+        yrmax = 0
+        xrmax = 0
+        yimin = 1
+        yimax = 0
+        ximax = 0
         
         if result_values :
-            ymin = min(result_values)
-            ymax = max(result_values)
-            xmax = max(abs(min(result_phases)), abs(max(result_phases)))
-        else:
-            ymin = min(import_values)
-            ymax = max(import_values)
-            xmax = max(abs(min(import_phases)), abs(max(import_phases)))
+            yrmin = min(result_values)
+            yrmax = max(result_values)
+            xrmax = max(abs(min(result_phases)), abs(max(result_phases)))
+    
+        if import_values :
+            yimin = min(import_values)
+            yimax = max(import_values)
+            ximax = max(abs(min(import_phases)), abs(max(import_phases)))
             
+        ymax = max(yrmax, yimax)
+        ymin = min(yrmin, yimin)
+        xmax = max(xrmax, ximax)
         ypad = ((ymax - ymin) / 100) * 10
         xpad = (xmax / 100) * 10
         
@@ -448,7 +458,7 @@ class ImportDialog(QDialog):
             Plot.instance().redraw()
             
         except:
-            QMessageBox.critical(self, "Import error", "Error importing data!")
+            QMessageBox.critical(self, "Import error", "Error importing data!\nError: " + str(sys.exc_info()[1]))
             raise
             
        
@@ -490,7 +500,7 @@ class ExportDatDialog(QFileDialog):
                     csv_writter.writerow(row)
                     
         except:
-            QMessageBox.warning(self, "Error", "Error exporting!")
+            QMessageBox.warning(self, "Error", "Error exporting!\nError: " + str(sys.exc_info()[1]))
             raise
     
 
