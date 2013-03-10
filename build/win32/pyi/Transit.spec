@@ -8,7 +8,7 @@ pyz = PYZ(a.pure)
 exe = EXE(pyz,
           a.scripts,
           exclude_binaries=1,
-          name=os.path.join('build\\', 'Transit.exe'),
+          name=os.path.join('build\\', 'TAC-maker.exe'),
           debug=False,
           strip=None,
           upx=False,

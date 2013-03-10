@@ -29,7 +29,7 @@ class TransitGUI(QMainWindow):
         logger.info('Init UI')
         self.setCentralWidget(Layout())
         self.setGeometry(0, 0, 800, 600)
-        self.setWindowTitle('Transit')
+        self.setWindowTitle('TAC-maker 1.0')
         self.setWindowIcon(QIcon('assets/icon.png')) 
 
         self.init_menu()
