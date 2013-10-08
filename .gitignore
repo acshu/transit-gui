@@ -34,3 +34,4 @@ config/last-session.ini
 config/tex.cache
 /stuff
 /build/win32/innosetup
+/.idea
