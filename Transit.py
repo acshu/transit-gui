@@ -9,13 +9,19 @@ author: Anatoli Vladev
 email: avladev@gmail.com
 """
 
-import sys, os
+import sys
+import os
+
+from lib.Layout import Layout
+from lib.Layout import InputForm
+from lib.Structures import Global
+from lib.Utils import logger
+
+
 os.environ['MPLCONFIGDIR'] = os.getcwd() + "/config/"
 from PyQt4.QtGui import QApplication, QMainWindow, QAction, QFileDialog, QMessageBox, QDesktopWidget, QIcon
 from PyQt4.QtCore import QLocale
-from lib.layout.Layout import Layout
-from lib.Logger import logger
-from lib.layout.InputForm import InputForm
+
 
 class TransitGUI(QMainWindow):
     """
@@ -24,12 +30,21 @@ class TransitGUI(QMainWindow):
     def __init__(self):
         super(TransitGUI, self).__init__()
         logger.info('Running Transit')
+
+        Global.init()
        
         self.setLocale(QLocale(QLocale.C))
         logger.info('Init UI')
         self.setCentralWidget(Layout())
-        self.setGeometry(0, 0, 800, 600)
-        self.setWindowTitle('TAC-maker 1.0')
+        screen_width = 800
+        screen_height = 550
+
+        if QApplication.desktop().screenGeometry().width() >= 900:
+            screen_width = 900
+
+        self.setGeometry(0, 0, screen_width, screen_height)
+
+        self.setWindowTitle('TAC-maker 1.0.1')
         self.setWindowIcon(QIcon('assets/icon.png')) 
 
         self.init_menu()
@@ -38,7 +53,7 @@ class TransitGUI(QMainWindow):
         center = QDesktopWidget().availableGeometry().center()
         frame_geometry.moveCenter(center)
         self.move(frame_geometry.topLeft())
-        self.showMaximized()
+        #self.showMaximized()
 
         self.statusBar().showMessage('Ready')
         self.show()
@@ -48,28 +63,28 @@ class TransitGUI(QMainWindow):
         """
         Creates application menu
         """
-        menubar = self.menuBar()
-        file_menu = menubar.addMenu('&File')
+        menu_bar = self.menuBar()
+        file_menu = menu_bar.addMenu('&File')
         
-        mopen = QAction('&Open...', self)
-        mopen.setShortcut('Ctrl+O')
-        mopen.setStatusTip('Open input parameters file')
-        mopen.triggered.connect(self.on_open)
+        action_open = QAction('&Open...', self)
+        action_open.setShortcut('Ctrl+O')
+        action_open.setStatusTip('Open input parameters file')
+        action_open.triggered.connect(self.on_open)
         
-        msave = QAction('&Save as...', self)
-        msave.setShortcut('Ctrl+S')
-        msave.setStatusTip('Save input parameters to file')
-        msave.triggered.connect(self.on_save)
+        action_save = QAction('&Save as...', self)
+        action_save.setShortcut('Ctrl+S')
+        action_save.setStatusTip('Save input parameters to file')
+        action_save.triggered.connect(self.on_save)
 
-        mexit = QAction('&Quit', self)
-        mexit.setShortcut('Ctrl+Q')
-        mexit.setStatusTip('Quit application')
-        mexit.triggered.connect(self.close)
+        action_exit = QAction('&Quit', self)
+        action_exit.setShortcut('Ctrl+Q')
+        action_exit.setStatusTip('Quit application')
+        action_exit.triggered.connect(self.close)
         
-        file_menu.addAction(mopen)
-        file_menu.addAction(msave)
+        file_menu.addAction(action_open)
+        file_menu.addAction(action_save)
         file_menu.addSeparator()
-        file_menu.addAction(mexit)
+        file_menu.addAction(action_exit)
     
     def on_open(self):
         """
@@ -77,7 +92,7 @@ class TransitGUI(QMainWindow):
         """
         try:
             filename = str(QFileDialog.getOpenFileName(self, 'Open file', directory="./data", filter="INI (*.ini);;All files (*.*)"))
-            InputForm.instance().loadParams(filename)
+            InputForm.instance().load_params(filename)
         except Exception:
             QMessageBox.warning(self, "Error", "Error reading ini file!\nError: " + str(sys.exc_info()[1]))
     
@@ -87,7 +102,7 @@ class TransitGUI(QMainWindow):
         """
         try:
             filename = str(QFileDialog.getSaveFileName(self, 'Open file', directory="./data", filter="INI (*.ini);;All files (*.*)"))
-            InputForm.instance().saveParams(filename)
+            InputForm.instance().save_params(filename)
         except Exception:
             QMessageBox.warning(self, "Error", "Error saving ini file!\nError: " + str(sys.exc_info()[1]))
     
@@ -97,13 +112,22 @@ class TransitGUI(QMainWindow):
         Handles closing of the app
         Saves session settings
         """
-        InputForm.instance().saveParams("./config/last-session.ini")
-        
+        InputForm.instance().save_params("./config/last-session.ini")
+
+        folder = './config/temp'
+        for filename in os.listdir(folder):
+            file_path = os.path.join(folder, filename)
+            try:
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+            except Exception, e:
+                print e
+
+
 def main():
     
     app = QApplication(sys.argv)
     transit = TransitGUI()
-    transit
     sys.exit(app.exec_())
 
 if __name__ == '__main__':
