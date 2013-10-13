@@ -21,7 +21,6 @@ scipy.linalg._flinalg.pyd
 SSLEAY32.dll
 tcl85.dll
 tk85.dll
-_hashlib.pyd
 _ssl.pyd
 _tkinter.pyd
 mpl-data\\images

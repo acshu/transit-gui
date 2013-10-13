@@ -3,6 +3,7 @@ from ConfigParser import ConfigParser
 from ast import literal_eval
 from copy import copy
 from genericpath import exists
+from math import atan, degrees, sin, sqrt, log10
 import operator
 import os
 import sys
@@ -15,6 +16,10 @@ import gc
 from matplotlib import rcParams
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from matplotlib.mlab import detrend_mean
+import numpy
+from scipy.signal.signaltools import detrend
+from sympy.ntheory.partitions_ import npartitions
 from lib.Structures import Global, TaskRange
 from lib.Utils import Constants, TaskImporter, flip_phase_list, uc_variable_name
 from lib.FormParams import *
@@ -52,6 +57,7 @@ class InputForm(QWidget):
         Global.event.task_completed.connect(self._on_task_completed)
         Global.event.task_progressed.connect(self._on_task_progressed)
         Global.event.task_range_progressed.connect(self._on_task_range_progressed)
+        Global.event.interface_load_task_params.connect(self._on_interface_load_task_params)
 
         self.vl = QVBoxLayout()
         self.vl.setContentsMargins(0,0,0,0)
@@ -183,90 +189,55 @@ class InputForm(QWidget):
         self._cancel.hide()
         self.tab.setDisabled(False)
 
+    def _on_interface_load_task_params(self, task):
+        self.input_parameters.semi_major_axis.value.setValue(task.input.semi_major_axis)
+        self.input_parameters.star_radius.value.setValue(task.input.star_radius)
+        self.input_parameters.planet_radius.value.setValue(task.input.planet_radius)
+        self.input_parameters.star_temperature.value.setValue(task.input.star_temperature)
+        self.input_parameters.planet_temperature.value.setValue(task.input.planet_temperature)
+        self.input_parameters.inclination.value.setValue(task.input.inclination)
+
+        darkening_law_index = 0
+        for item in DarkeningLaw.items:
+            if item[1] == task.input.darkening_law:
+                break
+            darkening_law_index += 1
+
+        self.input_parameters.darkening_law.value.setCurrentIndex(darkening_law_index)
+        self.input_parameters.darkening_coefficient_1.value.setValue(task.input.darkening_1)
+        self.input_parameters.darkening_coefficient_2.value.setValue(task.input.darkening_2)
+        self.input_parameters.phase_end.value.setValue(task.input.phase_end)
+        self.input_parameters.phase_step.value.setValue(task.input.phase_step)
+        self.input_parameters.integration_precision.value.setValue(log10(task.input.precision))
+
+        for parameter_name in copy(self.input_parameters.range_parameters):
+            parameter = getattr(self.input_parameters, parameter_name)
+            if parameter.range:
+                parameter.range.set_active(False)
+
+        self.repaint()
+
     def load_params(self, filename):
         config = ConfigParser()
         config.read(filename)
 
-        # semi-major axis
-        if config.has_option('input', 'semi_major_axis'):
-            self.input_parameters.semi_major_axis.value.setValue(config.getfloat('input', 'semi_major_axis'))
+        self._normalize_config(config)
 
-        # star radius
-        if config.has_option('input', 'star_radius'):
-            self.input_parameters.star_radius.value.setValue(config.getfloat('input', 'star_radius'))
+        # Input Parameters
+        self._load_config_param(config, 'input', 'semi_major_axis')
+        self._load_config_param(config, 'input', 'star_radius')
+        self._load_config_param(config, 'input', 'planet_radius')
+        self._load_config_param(config, 'input', 'star_temperature')
+        self._load_config_param(config, 'input', 'planet_temperature')
+        self._load_config_param(config, 'input', 'inclination')
+        self._load_config_param(config, 'input', 'darkening_law')
+        self._load_config_param(config, 'input', 'darkening_coefficient_1')
+        self._load_config_param(config, 'input', 'darkening_coefficient_2')
+        self._load_config_param(config, 'input', 'phase_end')
+        self._load_config_param(config, 'input', 'phase_step')
+        self._load_config_param(config, 'input', 'integration_precision')
 
-        # planet radius
-        planet_radius_range_from = None
-        planet_radius_range_to = None
-        planet_radius_range_step = None
-
-        if config.has_option('input', 'planet_radius_range_from'):
-            planet_radius_range_from = literal_eval(config.get('input', 'planet_radius_range_from'))
-
-        if config.has_option('input', 'planet_radius_range_to'):
-            planet_radius_range_to = literal_eval(config.get('input', 'planet_radius_range_to'))
-
-        if config.has_option('input', 'planet_radius_range_step'):
-            planet_radius_range_step = literal_eval(config.get('input', 'planet_radius_range_step'))
-
-        if config.has_option('input', 'planet_radius_range_active') and planet_radius_range_from and planet_radius_range_from and planet_radius_range_step:
-            self.input_parameters.planet_radius.range.set_range(planet_radius_range_from, planet_radius_range_to, planet_radius_range_step)
-            self.input_parameters.planet_radius.range.set_active(config.getboolean('input', 'planet_radius_range_active'))
-
-        if config.has_option('input', 'planet_radius'):
-            self.input_parameters.planet_radius.value.setValue(config.getfloat('input', 'planet_radius'))
-
-        # star temperature
-        if config.has_option('input', 'star_temperature'):
-            self.input_parameters.star_temperature.value.setValue(config.getfloat('input', 'star_temperature'))
-
-        # planet temperature
-        if config.has_option('input', 'planet_temperature'):
-            self.input_parameters.planet_temperature.value.setValue(config.getfloat('input', 'planet_temperature'))
-
-        # inclination
-        inclination_range_from = None
-        inclination_range_to = None
-        inclination_range_step = None
-
-        if config.has_option('input', 'inclination_range_from'):
-            inclination_range_from = literal_eval(config.get('input', 'inclination_range_from'))
-
-        if config.has_option('input', 'inclination_range_to'):
-            inclination_range_to = literal_eval(config.get('input', 'inclination_range_to'))
-
-        if config.has_option('input', 'inclination_range_step'):
-            inclination_range_step = literal_eval(config.get('input', 'inclination_range_step'))
-
-        if config.has_option('input', 'inclination_range_active') and inclination_range_from and inclination_range_to and inclination_range_step:
-            self.input_parameters.inclination.range.set_range(inclination_range_from, inclination_range_to, inclination_range_step)
-            self.input_parameters.inclination.range.set_active(config.getboolean('input', 'inclination_range_active'))
-
-        if config.has_option('input', 'inclination'):
-            self.input_parameters.inclination.value.setValue(config.getfloat('input', 'inclination'))
-
-        # darkening law
-        if config.has_option('input', 'darkening_law'):
-            self.input_parameters.darkening_law.value.setCurrentIndex(config.getint('input', 'darkening_law'))
-
-        if config.has_option('input', 'darkening_1'):
-            self.input_parameters.darkening_coefficient_1.value.setValue(config.getfloat('input', 'darkening_1'))
-
-        if config.has_option('input', 'darkening_2'):
-            self.input_parameters.darkening_coefficient_2.value.setValue(config.getfloat('input', 'darkening_2'))
-
-        # phase
-        if config.has_option('input', 'phase_end'):
-            self.input_parameters.phase_end.value.setValue(config.getfloat('input', 'phase_end'))
-
-        if config.has_option('input', 'phase_step'):
-            self.input_parameters.phase_step.value.setValue(config.getfloat('input', 'phase_step'))
-
-        # precision
-        if config.has_option('input', 'precision'):
-            self.input_parameters.integration_precision.value.setValue(config.getfloat('input', 'precision'))
-
-        # observation
+        # Import Parameters
         if config.has_option('import', 'filename') and config.get('import', 'filename'):
             if '/data/' in config.get('import', 'filename') and config.get('import', 'filename').index('/data/') == 0:
                 self.import_parameters.filename = os.getcwd().replace('\\', '/') + config.get('import', 'filename')
@@ -290,34 +261,94 @@ class InputForm(QWidget):
         if config.has_option('import', 'mag2flux_mag') :
             self.import_parameters.magnitude_max.setValue(config.getfloat('import', 'mag2flux_mag'))
 
+        # Fixes painting bug with range buttons when loading new file
+        # the active ranges stayed active even if they are inactive
+        self.repaint()
+
+    def _normalize_config(self, config):
+        if config.has_option('input', 'darkening_1'):
+            config.set('input', 'darkening_coefficient_1', config.get('input', 'darkening_1'))
+            config.remove_option('input', 'darkening_1')
+
+        if config.has_option('input', 'darkening_2'):
+            config.set('input', 'darkening_coefficient_2', config.get('input', 'darkening_2'))
+            config.remove_option('input', 'darkening_2')
+
+        if config.has_option('input', 'precision'):
+            config.set('input', 'integration_precision', config.get('input', 'precision'))
+            config.remove_option('input', 'precision')
+
+    def _load_config_param(self, config, section, name):
+        param = getattr(self.input_parameters, name)
+
+        if config.has_option(section, name):
+            if type(param.value) is QComboBox:
+                param.value.setCurrentIndex(config.getint(section, name))
+            else:
+                param.value.setValue(literal_eval(config.get(section, name)))
+
+        if param.range:
+            _from = _to = _step = _values = None
+            _active = False
+
+            if config.has_option(section, name + '_range_from'):
+                _from = literal_eval(config.get(section, name + '_range_from'))
+
+            if config.has_option(section, name + '_range_to'):
+                _to = literal_eval(config.get(section, name + '_range_to'))
+
+            if config.has_option(section, name + '_range_step'):
+                _step = literal_eval(config.get(section, name + '_range_step'))
+
+            if config.has_option(section, name + '_range_values'):
+                _values = literal_eval(config.get(section, name + '_range_values'))
+
+            if config.has_option(section, name + '_range_active'):
+                _active = config.getboolean(section, name + '_range_active')
+
+            if _values:
+                param.range.set_range(_values)
+            elif _from and _to and _step:
+                param.range.set_range(_from, _to, _step)
+
+            param.range.set_active(_active)
+
+    def _save_config_param(self, config, section, name):
+        param = getattr(self.input_parameters, name)
+
+        if type(param.value) is QComboBox:
+            config.set(section, name, param.value.currentIndex())
+        else:
+            config.set(section, name, param.getValue())
+
+        if param.range:
+            if param.range.range_from and param.range.range_to and param.range.range_step:
+                config.set(section, name + '_range_from', param.range.range_from)
+                config.set(section, name + '_range_to', param.range.range_to)
+                config.set(section, name + '_range_step', param.range.range_step)
+            elif param.range.values:
+                config.set(section, name + '_range_values', param.range.values)
+
+            if param.range.is_active():
+                config.set(section, name + '_range_active', param.range.is_active())
+
     def save_params(self, filename):
         config = ConfigParser()
         config.add_section('input')
 
-        config.set('input', 'semi_major_axis', self.input_parameters.semi_major_axis.getValue())
-        config.set('input', 'star_radius', self.input_parameters.star_radius.getValue())
-
-        config.set('input', 'planet_radius', self.input_parameters.planet_radius.getValue())
-        config.set('input', 'planet_radius_range_active', self.input_parameters.planet_radius.range.is_active())
-        config.set('input', 'planet_radius_range_from', self.input_parameters.planet_radius.range.range_from)
-        config.set('input', 'planet_radius_range_to', self.input_parameters.planet_radius.range.range_to)
-        config.set('input', 'planet_radius_range_step', self.input_parameters.planet_radius.range.range_step)
-
-        config.set('input', 'star_temperature', self.input_parameters.star_temperature.getValue())
-        config.set('input', 'planet_temperature', self.input_parameters.planet_temperature.getValue())
-
-        config.set('input', 'inclination', self.input_parameters.inclination.getValue())
-        config.set('input', 'inclination_range_active', self.input_parameters.inclination.range.is_active())
-        config.set('input', 'inclination_range_from', self.input_parameters.inclination.range.range_from)
-        config.set('input', 'inclination_range_to', self.input_parameters.inclination.range.range_to)
-        config.set('input', 'inclination_range_step', self.input_parameters.inclination.range.range_step)
-
-        config.set('input', 'darkening_law', self.input_parameters.darkening_law.value.currentIndex())
-        config.set('input', 'darkening_1', self.input_parameters.darkening_coefficient_1.getValue())
-        config.set('input', 'darkening_2', self.input_parameters.darkening_coefficient_2.getValue())
-        config.set('input', 'phase_end', self.input_parameters.phase_end.getValue())
-        config.set('input', 'phase_step', self.input_parameters.phase_step.getValue())
-        config.set('input', 'precision', self.input_parameters.integration_precision.getValue())
+        # Input Parameters
+        self._save_config_param(config, 'input', 'semi_major_axis')
+        self._save_config_param(config, 'input', 'star_radius')
+        self._save_config_param(config, 'input', 'planet_radius')
+        self._save_config_param(config, 'input', 'star_temperature')
+        self._save_config_param(config, 'input', 'planet_temperature')
+        self._save_config_param(config, 'input', 'inclination')
+        self._save_config_param(config, 'input', 'darkening_law')
+        self._save_config_param(config, 'input', 'darkening_coefficient_1')
+        self._save_config_param(config, 'input', 'darkening_coefficient_2')
+        self._save_config_param(config, 'input', 'phase_end')
+        self._save_config_param(config, 'input', 'phase_step')
+        self._save_config_param(config, 'input', 'integration_precision')
 
         config.add_section('import')
 
@@ -383,9 +414,15 @@ class InputParameters(QWidget):
 
         # Star temperature
         self.star_temperature = self.add_triplet(StarTemperature(), 6)
+        self.star_temperature.range.clicked.connect(lambda: self._on_range_clicked('star_temperature'))
+        self.star_temperature.range.state_changed.connect(self.star_temperature.value.setDisabled)
+        self.star_temperature.range.state_changed.connect(lambda: self._on_range_changed('star_temperature'))
 
         # Planet temperature
         self.planet_temperature = self.add_triplet(PlanetTemperature(), 7)
+        self.planet_temperature.range.clicked.connect(lambda: self._on_range_clicked('planet_temperature'))
+        self.planet_temperature.range.state_changed.connect(self.planet_temperature.value.setDisabled)
+        self.planet_temperature.range.state_changed.connect(lambda: self._on_range_changed('planet_temperature'))
 
         # Inclination
         self.inclination = self.add_triplet(Inclination(), 8)
@@ -395,10 +432,20 @@ class InputParameters(QWidget):
 
         # Darkening law
         self.darkening_law = self.add_triplet(DarkeningLaw(), 9)
+        self.darkening_law.range.clicked.connect(lambda: self._on_range_clicked('darkening_law'))
+        self.darkening_law.range.state_changed.connect(self.darkening_law.value.setDisabled)
+        self.darkening_law.range.state_changed.connect(lambda: self._on_range_changed('darkening_law'))
 
         # Darkening coefficients
         self.darkening_coefficient_1 = self.add_triplet(DarkeningCoefficient('Dark. coefficient 1:', ''), 10)
+        self.darkening_coefficient_1.range.clicked.connect(lambda: self._on_range_clicked('darkening_coefficient_1'))
+        self.darkening_coefficient_1.range.state_changed.connect(self.darkening_coefficient_1.value.setDisabled)
+        self.darkening_coefficient_1.range.state_changed.connect(lambda: self._on_range_changed('darkening_coefficient_1'))
+
         self.darkening_coefficient_2 = self.add_triplet(DarkeningCoefficient('Dark. coefficient 2:', ''), 11)
+        self.darkening_coefficient_2.range.clicked.connect(lambda: self._on_range_clicked('darkening_coefficient_2'))
+        self.darkening_coefficient_2.range.state_changed.connect(self.darkening_coefficient_2.value.setDisabled)
+        self.darkening_coefficient_2.range.state_changed.connect(lambda: self._on_range_changed('darkening_coefficient_2'))
 
         # Phase end
         self.phase_end = self.add_triplet(PhaseEnd(), 12)
@@ -431,7 +478,10 @@ class InputParameters(QWidget):
 
     def _on_range_clicked(self, name):
         if not getattr(self, name).range.is_active():
-            dialog = getattr(sys.modules[__name__], uc_variable_name(name) + 'RangeDialog')(getattr(self, name).range.range_from, getattr(self, name).range.range_to, getattr(self, name).range.range_step)
+            if getattr(self, name) == self.darkening_law:
+                dialog = getattr(sys.modules[__name__], uc_variable_name(name) + 'RangeDialog')(getattr(self, name).range.values)
+            else:
+                dialog = getattr(sys.modules[__name__], uc_variable_name(name) + 'RangeDialog')(getattr(self, name).range.range_from, getattr(self, name).range.range_to, getattr(self, name).range.range_step)
             dialog.accepted.connect(lambda: self._on_range_accepted(name))
             dialog.rejected.connect(lambda: self._on_range_rejected(name))
             dialog.display()
@@ -440,9 +490,12 @@ class InputParameters(QWidget):
             pass
 
     def _on_range_accepted(self, name):
-        getattr(self, name).range.set_range(getattr(self.sender(), name + '_from').getValue(),
-                                            getattr(self.sender(), name + '_to').getValue(),
-                                            getattr(self.sender(), name + '_step').getValue())
+        if getattr(self, name) == self.darkening_law:
+            getattr(self, name).range.set_range(self.sender().values())
+        else:
+            getattr(self, name).range.set_range(getattr(self.sender(), name + '_from').getValue(),
+                                                getattr(self.sender(), name + '_to').getValue(),
+                                                getattr(self.sender(), name + '_step').getValue())
         getattr(self, name).range.set_active(True)
 
     def _on_range_rejected(self, name):
@@ -597,6 +650,15 @@ class ImportParameters(QWidget):
 
             phases = flip_phase_list(phases)
 
+            # TODO Detrending
+            #slope = (values[8] - values[-8])/(phases[8] - phases[-8])
+            #angle = atan(slope)
+            #
+            #for index, value in enumerate(values):
+            #    hyp = sqrt(abs((phases[-8] - phases[index])**2 - (values[-8] - values[index])**2))
+            #    print hyp
+            #    values[index] += hyp * sin(angle)
+
             self.import_phases = phases
             self.import_values = values
 
@@ -637,15 +699,19 @@ class ResultView(QTabWidget):
     def __init__(self):
         super(ResultView, self).__init__()
 
-        self.results = ResultsTable()
+        self.results = ResultsTab()
         self.addTab(self.results, 'Results')
 
         self.plot = ResultPlot()
         self.addTab(self.plot, 'Plot')
 
-        self.data = ResultTable()
+        self.data = ResultTab()
         self.addTab(self.data, 'Data')
 
+        self.setCurrentIndex(1)
+        Global.event.task_selected.connect(self._on_task_selected)
+
+    def _on_task_selected(self, task):
         self.setCurrentIndex(1)
 
 
@@ -662,21 +728,30 @@ class ResultPlot(QWidget):
         self.residual_plot.setFixedHeight(150)
         vl.addWidget(self.residual_plot)
 
-        self.chi2_hl = QHBoxLayout()
-        self.chi2_hl.setAlignment(Qt.AlignHCenter)
+        hl = QHBoxLayout()
+        #hl.setAlignment(Qt.AlignHCenter)
+
         self.chi2_label = QLabel('chi^2')
         self.chi2_label.setFixedWidth(30)
-        #noinspection PyTrailingSemicolon
         self.chi2_label.hide();
         self.chi2_value = QLineEdit()
         self.chi2_value.setAlignment(Qt.AlignRight)
         self.chi2_value.setFixedWidth(120)
         self.chi2_value.hide()
-        self.chi2_hl.addWidget(self.chi2_label)
-        self.chi2_hl.addWidget(self.chi2_value)
 
-        vl.addLayout(self.chi2_hl)
+        auto_plot =  QCheckBox('Auto plot finished result')
+        auto_plot.stateChanged.connect(self._on_auto_plot_state_changed)
+        hl.addWidget(auto_plot, Qt.AlignLeft)
+        hl.addWidget(self.chi2_label)
+        hl.addWidget(self.chi2_value)
+        hl.setStretch(1, 0)
+
+        vl.addLayout(hl)
         self.setLayout(vl)
+
+    def _on_auto_plot_state_changed(self, checked_state):
+        checked_state = True if checked_state else False
+        Global.event.interface_auto_plot_state_changed.emit(checked_state)
 
 
 class Plot(FigureCanvas):
@@ -686,6 +761,7 @@ class Plot(FigureCanvas):
     def __init__(self):
         Global.event.task_selected.connect(self._on_task_selected)
         Global.event.task_deleted.connect(self._on_task_deleted)
+        Global.event.tasks_list_updated.connect(self._on_tasks_list_updated)
 
         self.task = None
         self.last_x_limit = []
@@ -709,7 +785,13 @@ class Plot(FigureCanvas):
         if self.task == task:
             self.set_task(None)
             self.clear()
-            ResultTable.instance().set_data([], [], [], [])
+            ResultTab.instance().set_data([], [], [], [])
+
+    def _on_tasks_list_updated(self):
+        if not len(Global.tasks()):
+            self.set_task(None)
+            self.clear()
+            ResultTab.instance().set_data([], [], [], [])
 
     @staticmethod
     def instance():
@@ -747,7 +829,7 @@ class Plot(FigureCanvas):
                 import_phases.append(key)
                 import_values.append(self.task.result.data()[key]['import_value'])
 
-        ResultTable.instance().set_data(result_phases, result_values, import_phases, import_values)
+        ResultTab.instance().set_data(result_phases, result_values, import_phases, import_values)
 
         if not result_phases and not import_phases :
             return
@@ -775,6 +857,10 @@ class Plot(FigureCanvas):
         y_pad = ((y_max - y_min) / 100) * 10
         x_pad = (x_max / 100) * 10
 
+        if y_min == y_max:
+            y_min += 1
+            y_max -= 1
+
         self.axes.set_autoscaley_on(False)
         self.axes.set_ylim([y_min - y_pad, y_max + y_pad])
 
@@ -783,7 +869,6 @@ class Plot(FigureCanvas):
 
         self.axes.set_autoscalex_on(False)
         self.axes.set_xlim(self.last_x_limit)
-
 
         if len(result_phases):
             self.axes.plot(result_phases, result_values, color='b', label="Prediction")
@@ -802,6 +887,7 @@ class ResidualPlot(FigureCanvas):
         Global.event.task_selected.connect(self._on_task_selected)
         Global.event.plot_x_limit_changed.connect(self._on_x_limit_changed)
         Global.event.task_deleted.connect(self._on_task_deleted)
+        Global.event.tasks_list_updated.connect(self._on_tasks_list_updated)
 
         self.task = None
         self.axes = None
@@ -824,6 +910,11 @@ class ResidualPlot(FigureCanvas):
 
     def _on_task_deleted(self, task):
         if self.task == task:
+            self.set_task(None)
+            self.clear()
+
+    def _on_tasks_list_updated(self):
+        if not len(Global.tasks()):
             self.set_task(None)
             self.clear()
 
@@ -870,6 +961,7 @@ class ResidualPlot(FigureCanvas):
                 phases.append(key)
                 delta_values.append(self.task.result.data()[key]['delta_value'])
 
+
         y_max = max(abs(min(delta_values)), abs(max(delta_values)))
         y_pad = (y_max / 100) * 10
 
@@ -902,15 +994,15 @@ class ResidualPlot(FigureCanvas):
         self.last_x_limit = limit
 
 
-class ResultTable(QWidget):
+class ResultTab(QWidget):
 
     __instance = None
 
     def __init__(self):
         super(QWidget, self).__init__()
 
-        if ResultTable.__instance is None :
-            ResultTable.__instance = self
+        if ResultTab.__instance is None :
+            ResultTab.__instance = self
 
         self.phases = []
         self.values = []
@@ -979,7 +1071,7 @@ class ResultTable(QWidget):
 
     @staticmethod
     def instance():
-        return ResultTable.__instance
+        return ResultTab.__instance
 
 
 class ExportDatDialog(QFileDialog):
@@ -1013,6 +1105,29 @@ class ExportDatDialog(QFileDialog):
             raise
 
 
+class ResultsTab(QWidget):
+
+    def __init__(self):
+        QWidget.__init__(self)
+
+        vl = QVBoxLayout()
+        self.setLayout(vl)
+
+        table = ResultsTable()
+        vl.addWidget(table)
+
+        hl = QHBoxLayout()
+        hl.setAlignment(Qt.AlignRight)
+        vl.addLayout(hl)
+
+        delete_all_button = QPushButton('Delete all')
+        delete_all_button.clicked.connect(self._on_delete_all_clicked)
+        hl.addWidget(delete_all_button)
+
+    def _on_delete_all_clicked(self):
+        Global.event.interface_delete_all_results_clicked.emit()
+
+
 class ResultsTable(QTableView):
 
     def __init__(self):
@@ -1021,6 +1136,7 @@ class ResultsTable(QTableView):
         self.last_sort_column = 0
         self.last_sort_order = Qt.AscendingOrder
         self.last_selected_row = 0
+        self.last_scroll_position = 0
 
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -1045,6 +1161,8 @@ class ResultsTable(QTableView):
             task = self.get_task_by_row(row)
             if task:
                 self.delete_task_by_id(task.id)
+        elif event.type() == QEvent.KeyPress and (event.key() == Qt.Key_Enter or event.key() == Qt.Key_Return):
+            Global.event.task_selected.emit(self.get_task_by_row(self.currentIndex().row()))
         else:
             return QTableView.keyPressEvent(self, event)
 
@@ -1074,21 +1192,29 @@ class ResultsTable(QTableView):
         row = self.rowAt(point.y())
         task = self.get_task_by_row(row)
 
-        print row, task
-
         if row < 0 or task is None:
             return
 
         menu = QMenu()
 
-        action = QAction(self)
-        action.setData(task.id)
-        action.setText('Delete')
-        action.triggered.connect(self._on_row_delete_action)
-        menu.addAction(action)
+        load_action = QAction(self)
+        load_action.setData(task.id)
+        load_action.setText("Load parameters")
+        load_action.triggered.connect(self._on_load_params_action)
+        menu.addAction(load_action)
+
+        delete_action = QAction(self)
+        delete_action.setData(task.id)
+        delete_action.setText('Delete')
+        delete_action.triggered.connect(self._on_row_delete_action)
+        menu.addAction(delete_action)
 
         menu.popup(self.mapToGlobal(point))
         menu.exec_()
+
+    def _on_load_params_action(self):
+        id = self.sender().data().toInt()[0]
+        Global.event.interface_load_task_params.emit(self.get_task_by_id(id))
 
     def _on_row_delete_action(self):
         id = self.sender().data().toInt()[0]
@@ -1108,7 +1234,7 @@ class ResultsTable(QTableView):
         return None
 
     def get_task_by_row(self, row):
-        if row < len(self.model().tasks_data):
+        if self.model() and -1 < row < len(self.model().tasks_data):
             return self.get_task_by_id(self.model().tasks_data[row][0])
 
         return None
@@ -1118,15 +1244,16 @@ class ResultsTable(QTableView):
             self.last_sort_column = self.model().last_sort_column
             self.last_sort_order = self.model().last_sort_order
             self.last_selected_row = self.currentIndex().row()
+            self.last_scroll_position = self.verticalScrollBar().sliderPosition()
 
         self.setModel(ResultsTableModel(Global.tasks()))
         self.sortByColumn(self.last_sort_column, self.last_sort_column)
         self.resizeColumnsToContents()
         self.horizontalHeader().setStretchLastSection(True)
         self.selectRow(self.last_selected_row)
+        self.verticalScrollBar().setSliderPosition(self.last_scroll_position)
 
     def _on_row_double_clicked(self, index):
-        self.parent().parent().setCurrentIndex(1)
         target_id = self.model().tasks_data[index.row()][0]
         for task in self.model().tasks:
             if task.id == target_id:

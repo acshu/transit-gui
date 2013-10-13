@@ -3,7 +3,7 @@
 """
 Transit GUI
 
-Transit callculator GUI
+Transit calculator GUI
 
 author: Anatoli Vladev
 email: avladev@gmail.com
@@ -32,15 +32,14 @@ class TransitGUI(QMainWindow):
         logger.info('Running Transit')
 
         Global.init()
-       
-        self.setLocale(QLocale(QLocale.C))
+
         logger.info('Init UI')
         self.setCentralWidget(Layout())
         screen_width = 800
         screen_height = 550
 
         if QApplication.desktop().screenGeometry().width() >= 900:
-            screen_width = 900
+            screen_width = 950
 
         self.setGeometry(0, 0, screen_width, screen_height)
 
@@ -116,6 +115,10 @@ class TransitGUI(QMainWindow):
 
         folder = './config/temp'
         for filename in os.listdir(folder):
+
+            if filename == "README":
+                continue
+
             file_path = os.path.join(folder, filename)
             try:
                 if os.path.isfile(file_path):
@@ -125,7 +128,7 @@ class TransitGUI(QMainWindow):
 
 
 def main():
-    
+    QLocale.setDefault(QLocale(QLocale.C))
     app = QApplication(sys.argv)
     transit = TransitGUI()
     sys.exit(app.exec_())

@@ -49,6 +49,12 @@ def uc_variable_name(s):
     return "".join([w[0].upper() + w[1:] for w in re.split('_', s)])
 
 
+def add_triplet(container, triplet, position):
+    container.addWidget(triplet.label, position, 0)
+    container.addWidget(triplet.value, position, 1)
+    container.addWidget(triplet.unit, position, 2)
+    return triplet
+
 
 class Constants:
 

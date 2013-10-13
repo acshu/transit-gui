@@ -1,8 +1,8 @@
 from _ast import List
 from PyQt4.QtCore import Qt, pyqtSignal
-from PyQt4.QtGui import QDoubleSpinBox, QLabel, QWidget, QComboBox, QFont, QGroupBox, QTextEdit, QFrame
+from PyQt4.QtGui import QDoubleSpinBox, QLabel, QWidget, QComboBox, QFont, QGroupBox, QTextEdit, QFrame, QCheckBox
 from matplotlib.backends.qt4_editor.formlayout import QPushButton, QDialog, QGridLayout, QVBoxLayout, QHBoxLayout, QLineEdit
-from lib.Utils import frange, Constants
+from lib.Utils import frange, Constants, add_triplet
 
 
 class CustomDoubleSpinBox(QDoubleSpinBox):
@@ -28,7 +28,7 @@ class RangeButton(QPushButton):
         font = QFont()
         font.setPixelSize(8)
         self.setFont(font)
-        self.setFixedSize(16,16)
+        self.setFixedSize(16, 16)
         self.range_from = None
         self.range_to = None
         self.range_step = None
@@ -43,8 +43,6 @@ class RangeButton(QPushButton):
             self.range_to = range_to
             self.range_step = range_step
             self.values = frange(range_from, range_to, range_step) + [range_to]
-
-        print self.values
 
     def set_active(self, bool):
         self._active = bool
@@ -198,7 +196,7 @@ class PlanetRadiusRJ(Triplet):
 class StarTemperature(Triplet):
 
     def __init__(self):
-        Triplet.__init__(self, 'Star temperature:', CustomDoubleSpinBox(), 'K')
+        Triplet.__init__(self, 'Star temperature:', CustomDoubleSpinBox(), 'K', True)
 
         self.value = CustomDoubleSpinBox()
         self.value.setRange(0, 99999)
@@ -208,16 +206,41 @@ class StarTemperature(Triplet):
         self.value.setValue(4675)
 
 
+class StarTemperatureStep(Triplet):
+
+    def __init__(self):
+        Triplet.__init__(self, 'By:', CustomDoubleSpinBox(), 'K')
+
+        self.value = CustomDoubleSpinBox()
+        self.value.setRange(0, 99999)
+        self.value.setSingleStep(1)
+        self.value.setDecimals(0)
+        self.value.setAccelerated(True)
+        self.value.setValue(100)
+
+
 class PlanetTemperature(Triplet):
 
     def __init__(self):
-        Triplet.__init__(self, 'Planet temperature:', CustomDoubleSpinBox(), 'K')
+        Triplet.__init__(self, 'Planet temperature:', CustomDoubleSpinBox(), 'K', True)
 
         self.value.setRange(0, 99999)
         self.value.setSingleStep(1)
         self.value.setDecimals(0)
         self.value.setAccelerated(True)
         self.value.setValue(1300)
+
+
+class PlanetTemperatureStep(Triplet):
+
+    def __init__(self):
+        Triplet.__init__(self, 'By:', CustomDoubleSpinBox(), 'K')
+
+        self.value.setRange(0, 99999)
+        self.value.setSingleStep(1)
+        self.value.setDecimals(0)
+        self.value.setAccelerated(True)
+        self.value.setValue(10)
 
 
 class Inclination(Triplet):
@@ -246,27 +269,37 @@ class InclinationStep(Triplet):
 
 class DarkeningLaw(Triplet):
 
+    items = ('Linear', 'linear'), ('Quadratic', 'quadratic'), ('Square root', 'squareroot'), ('Logarithmic', 'logarithmic')
+
     def __init__(self):
-        Triplet.__init__(self, 'Darkening law:', QComboBox(), '')
+        Triplet.__init__(self, 'Darkening law:', QComboBox(), '', True)
 
         self.value = QComboBox()
-        self.value.addItem('Linear', 'linear')
-        self.value.addItem('Quadratic', 'quadratic')
-        self.value.addItem('Square root', 'squareroot')
-        self.value.addItem('Logarithmic', 'logarithmic')
+        for item in self.items:
+            self.value.addItem(item[0], item[1])
 
 
 class DarkeningCoefficient(Triplet):
 
     def __init__(self, label='', unit=''):
-        Triplet.__init__(self, label, CustomDoubleSpinBox(), unit)
+        Triplet.__init__(self, label, CustomDoubleSpinBox(), unit, True)
 
         self.value.setRange(0, 1)
         self.value.setSingleStep(0.01)
         self.value.setDecimals(10)
         self.value.setAccelerated(True)
         self.value.setValue(0)
-        self.value.setRange(-9999,9999)
+
+class DarkeningCoefficientStep(Triplet):
+
+    def __init__(self, unit=''):
+        Triplet.__init__(self, 'By:', CustomDoubleSpinBox(), unit, True)
+
+        self.value.setRange(0, 1)
+        self.value.setSingleStep(0.01)
+        self.value.setDecimals(10)
+        self.value.setAccelerated(True)
+        self.value.setValue(0.01)
 
 
 class PhaseEnd(Triplet):
@@ -312,12 +345,12 @@ class RangeDialog(QDialog):
         self.setWindowTitle(title)
         self.setModal(True)
 
-        ok_button = QPushButton('OK')
-        ok_button.setDefault(True)
-        ok_button.clicked.connect(self.accept)
+        self.ok_button = QPushButton('OK')
+        self.ok_button.setDefault(True)
+        self.ok_button.clicked.connect(self.accept)
 
-        cancel_button = QPushButton('Cancel')
-        cancel_button.clicked.connect(self.reject)
+        self.cancel_button = QPushButton('Cancel')
+        self.cancel_button.clicked.connect(self.reject)
 
         frame = QFrame();
         frame.setFrameShape(QFrame.HLine)
@@ -325,8 +358,8 @@ class RangeDialog(QDialog):
         frame.setFixedHeight(10)
 
         hl = QHBoxLayout()
-        hl.addWidget(ok_button, 1, Qt.AlignLeft)
-        hl.addWidget(cancel_button, 0, Qt.AlignRight)
+        hl.addWidget(self.ok_button, 1, Qt.AlignLeft)
+        hl.addWidget(self.cancel_button, 0, Qt.AlignRight)
 
         vl = QVBoxLayout()
         vl.addWidget(frame)
@@ -365,19 +398,11 @@ class InclinationRangeDialog(RangeDialog):
         range_step = self.inclination_step.value.value() if not range_step else range_step
         self.inclination_step.value.setValue(range_step)
 
-        self.add_triplet(grid, self.inclination_from, 1)
-        self.add_triplet(grid, self.inclination_to, 2)
-        self.add_triplet(grid, self.inclination_step, 3)
+        add_triplet(grid, self.inclination_from, 1)
+        add_triplet(grid, self.inclination_to, 2)
+        add_triplet(grid, self.inclination_step, 3)
 
         self.layout().insertLayout(0, grid)
-
-
-    @staticmethod
-    def add_triplet(container, triplet, position):
-        container.addWidget(triplet.label, position, 0)
-        container.addWidget(triplet.value, position, 1)
-        container.addWidget(triplet.unit, position, 2)
-        return triplet
 
 
 class PlanetRadiusRangeDialog(RangeDialog):
@@ -385,8 +410,6 @@ class PlanetRadiusRangeDialog(RangeDialog):
     def __init__(self, range_from=None, range_to=None, range_step=None):
         RangeDialog.__init__(self, 'Planet radius range')
         self.setFixedHeight(222)
-
-        self._changeFromSignal = False
 
         grid = QGridLayout()
         grid.setAlignment(Qt.AlignTop)
@@ -417,14 +440,14 @@ class PlanetRadiusRangeDialog(RangeDialog):
         self.planet_radius_to.value.setValue(1 if not range_to else range_to)
         self.planet_radius_step.value.setValue(0.001 if not range_step else range_step)
 
-        self.add_triplet(grid, self.planet_radius_from, 1)
-        self.add_triplet(grid, self.planet_radius_from_rj, 2)
+        add_triplet(grid, self.planet_radius_from, 1)
+        add_triplet(grid, self.planet_radius_from_rj, 2)
 
-        self.add_triplet(grid, self.planet_radius_to, 3)
-        self.add_triplet(grid, self.planet_radius_to_rj, 4)
+        add_triplet(grid, self.planet_radius_to, 3)
+        add_triplet(grid, self.planet_radius_to_rj, 4)
 
-        self.add_triplet(grid, self.planet_radius_step, 5)
-        self.add_triplet(grid, self.planet_radius_step_rj, 6)
+        add_triplet(grid, self.planet_radius_step, 5)
+        add_triplet(grid, self.planet_radius_step_rj, 6)
 
         self.layout().insertLayout(0, grid)
 
@@ -459,14 +482,6 @@ class PlanetRadiusRangeDialog(RangeDialog):
             target.value.blockSignals(False)
 
 
-    @staticmethod
-    def add_triplet(container, triplet, position):
-        container.addWidget(triplet.label, position, 0)
-        container.addWidget(triplet.value, position, 1)
-        container.addWidget(triplet.unit, position, 2)
-        return triplet
-
-
 class SemiMajorAxisRangeDialog(RangeDialog):
 
     def __init__(self, range_from=None, range_to=None, range_step=None):
@@ -494,18 +509,11 @@ class SemiMajorAxisRangeDialog(RangeDialog):
         range_step = self.semi_major_axis_step.value.value() if not range_step else range_step
         self.semi_major_axis_step.value.setValue(range_step)
 
-        self.add_triplet(grid, self.semi_major_axis_from, 1)
-        self.add_triplet(grid, self.semi_major_axis_to, 2)
-        self.add_triplet(grid, self.semi_major_axis_step, 3)
+        add_triplet(grid, self.semi_major_axis_from, 1)
+        add_triplet(grid, self.semi_major_axis_to, 2)
+        add_triplet(grid, self.semi_major_axis_step, 3)
 
         self.layout().insertLayout(0, grid)
-
-    @staticmethod
-    def add_triplet(container, triplet, position):
-        container.addWidget(triplet.label, position, 0)
-        container.addWidget(triplet.value, position, 1)
-        container.addWidget(triplet.unit, position, 2)
-        return triplet
 
 
 class StarRadiusRangeDialog(RangeDialog):
@@ -513,8 +521,6 @@ class StarRadiusRangeDialog(RangeDialog):
     def __init__(self, range_from=None, range_to=None, range_step=None):
         RangeDialog.__init__(self, 'Star radius range')
         self.setFixedHeight(222)
-
-        self._changeFromSignal = False
 
         grid = QGridLayout()
         grid.setAlignment(Qt.AlignTop)
@@ -544,14 +550,14 @@ class StarRadiusRangeDialog(RangeDialog):
         self.star_radius_to.value.setValue(1 if not range_to else range_to)
         self.star_radius_step.value.setValue(0.001 if not range_step else range_step)
 
-        self.add_triplet(grid, self.star_radius_from, 1)
-        self.add_triplet(grid, self.star_radius_from_rs, 2)
+        add_triplet(grid, self.star_radius_from, 1)
+        add_triplet(grid, self.star_radius_from_rs, 2)
 
-        self.add_triplet(grid, self.star_radius_to, 3)
-        self.add_triplet(grid, self.star_radius_to_rs, 4)
+        add_triplet(grid, self.star_radius_to, 3)
+        add_triplet(grid, self.star_radius_to_rs, 4)
 
-        self.add_triplet(grid, self.star_radius_step, 5)
-        self.add_triplet(grid, self.star_radius_step_rs, 6)
+        add_triplet(grid, self.star_radius_step, 5)
+        add_triplet(grid, self.star_radius_step_rs, 6)
 
         self.layout().insertLayout(0, grid)
 
@@ -586,9 +592,160 @@ class StarRadiusRangeDialog(RangeDialog):
             target.value.blockSignals(False)
 
 
-    @staticmethod
-    def add_triplet(container, triplet, position):
-        container.addWidget(triplet.label, position, 0)
-        container.addWidget(triplet.value, position, 1)
-        container.addWidget(triplet.unit, position, 2)
-        return triplet
+class DarkeningLawRangeDialog(RangeDialog):
+
+    def __init__(self, values=None):
+        RangeDialog.__init__(self, 'Darkening law range')
+        self.setFixedHeight(102)
+
+        grid = QGridLayout()
+        grid.setAlignment(Qt.AlignTop)
+        grid.setColumnStretch(1,1)
+
+        self.checkboxes = []
+
+        row = 1
+        cell = 1
+        for item in DarkeningLaw.items:
+            checkbox = QCheckBox(item[0])
+            checkbox.setObjectName(item[1])
+            checkbox.stateChanged.connect(self._on_checkbox_state_changed)
+            grid.addWidget(checkbox, row, cell)
+            self.checkboxes.append(checkbox)
+
+            if values and item[1] in values:
+                checkbox.setChecked(True)
+
+            cell += 1
+
+            if cell > 2:
+                cell = 1
+                row += 1
+
+        self.layout().insertLayout(0, grid)
+
+        if not len(self.values()):
+            self.ok_button.setDisabled(True)
+
+    def _on_checkbox_state_changed(self):
+        if not len(self.values()):
+            self.ok_button.setDisabled(True)
+        else:
+            self.ok_button.setDisabled(False)
+
+    def values(self):
+        checked = []
+        for checkbox in self.checkboxes:
+            if checkbox.isChecked():
+                checked.append(str(checkbox.objectName()))
+
+        return checked
+
+
+class DarkeningCoefficient1RangeDialog(RangeDialog):
+
+    def __init__(self, range_from=None, range_to=None, range_step=None):
+        RangeDialog.__init__(self, 'Darkening coefficient 1 range')
+
+        self.setFixedHeight(140)
+
+        grid = QGridLayout()
+        grid.setAlignment(Qt.AlignTop)
+        grid.setColumnStretch(1,1)
+        grid.setColumnMinimumWidth(0,60)
+
+        self.darkening_coefficient_1_from = DarkeningCoefficient()
+        self.darkening_coefficient_1_from.label.setText('From:')
+        range_from = 0 if not range_from else range_from
+        self.darkening_coefficient_1_from.value.setValue(range_from)
+
+        self.darkening_coefficient_1_to = DarkeningCoefficient()
+        self.darkening_coefficient_1_to.label.setText('To:')
+        range_to = 1 if not range_to else range_to
+        self.darkening_coefficient_1_to.value.setValue(range_to)
+
+        self.darkening_coefficient_1_step = DarkeningCoefficientStep()
+        range_step = self.darkening_coefficient_1_step.value.value() if not range_step else range_step
+        self.darkening_coefficient_1_step.value.setValue(range_step)
+
+        add_triplet(grid, self.darkening_coefficient_1_from, 1)
+        add_triplet(grid, self.darkening_coefficient_1_to, 2)
+        add_triplet(grid, self.darkening_coefficient_1_step, 3)
+
+        self.layout().insertLayout(0, grid)
+
+
+class DarkeningCoefficient2RangeDialog(DarkeningCoefficient1RangeDialog):
+
+    def __init__(self, range_from=None, range_to=None, range_step=None):
+        DarkeningCoefficient1RangeDialog.__init__(self, range_from, range_to, range_step)
+        self.setWindowTitle('Darkening coefficient 2 range')
+        self.darkening_coefficient_2_from = self.darkening_coefficient_1_from
+        self.darkening_coefficient_2_to = self.darkening_coefficient_1_to
+        self.darkening_coefficient_2_step = self.darkening_coefficient_1_step
+
+
+class StarTemperatureRangeDialog(RangeDialog):
+
+    def __init__(self, range_from=None, range_to=None, range_step=None):
+        RangeDialog.__init__(self, 'Star temperature range')
+
+        self.setFixedHeight(140)
+
+        grid = QGridLayout()
+        grid.setAlignment(Qt.AlignTop)
+        grid.setColumnStretch(1,1)
+        grid.setColumnMinimumWidth(0,60)
+
+        self.star_temperature_from = StarTemperature()
+        self.star_temperature_from.label.setText('From:')
+        range_from = 2000 if not range_from else range_from
+        self.star_temperature_from.value.setValue(range_from)
+
+        self.star_temperature_to = StarTemperature()
+        self.star_temperature_to.label.setText('To:')
+        range_to = 10000 if not range_to else range_to
+        self.star_temperature_to.value.setValue(range_to)
+
+        self.star_temperature_step = StarTemperatureStep()
+        range_step = self.star_temperature_step.value.value() if not range_step else range_step
+        self.star_temperature_step.value.setValue(range_step)
+
+        add_triplet(grid, self.star_temperature_from, 1)
+        add_triplet(grid, self.star_temperature_to, 2)
+        add_triplet(grid, self.star_temperature_step, 3)
+
+        self.layout().insertLayout(0, grid)
+
+
+class PlanetTemperatureRangeDialog(RangeDialog):
+
+    def __init__(self, range_from=None, range_to=None, range_step=None):
+        RangeDialog.__init__(self, 'Planet temperature range')
+
+        self.setFixedHeight(140)
+
+        grid = QGridLayout()
+        grid.setAlignment(Qt.AlignTop)
+        grid.setColumnStretch(1,1)
+        grid.setColumnMinimumWidth(0,60)
+
+        self.planet_temperature_from = PlanetTemperature()
+        self.planet_temperature_from.label.setText('From:')
+        range_from = 0 if not range_from else range_from
+        self.planet_temperature_from.value.setValue(range_from)
+
+        self.planet_temperature_to = PlanetTemperature()
+        self.planet_temperature_to.label.setText('To:')
+        range_to = 1000 if not range_to else range_to
+        self.planet_temperature_to.value.setValue(range_to)
+
+        self.planet_temperature_step = PlanetTemperatureStep()
+        range_step = self.planet_temperature_step.value.value() if not range_step else range_step
+        self.planet_temperature_step.value.setValue(range_step)
+
+        add_triplet(grid, self.planet_temperature_from, 1)
+        add_triplet(grid, self.planet_temperature_to, 2)
+        add_triplet(grid, self.planet_temperature_step, 3)
+
+        self.layout().insertLayout(0, grid)

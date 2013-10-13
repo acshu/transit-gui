@@ -32,6 +32,9 @@ class GlobalEvent(QObject):
     # Interface events
     interface_redraw_clicked = pyqtSignal()
     interface_calculate_clicked = pyqtSignal()
+    interface_auto_plot_state_changed = pyqtSignal(bool)
+    interface_delete_all_results_clicked = pyqtSignal()
+    interface_load_task_params = pyqtSignal(object)
 
     # Other events
     data_imported = pyqtSignal(list, list)
@@ -46,6 +49,7 @@ class Global:
     _task = None
     _task_range = None
     _tasks = []
+    _auto_plot = False
     event = GlobalEvent()
 
     def __init__(self):
@@ -60,6 +64,8 @@ class Global:
         Global.event.task_range_completed.connect(Global._on_task_range_completed)
         Global.event.data_imported.connect(Global._on_data_imported)
         Global.event.interface_redraw_clicked.connect(Global._on_interface_redraw_clicked)
+        Global.event.interface_auto_plot_state_changed.connect(Global._on_interface_auto_plot_state_changed)
+        Global.event.interface_delete_all_results_clicked.connect(Global._on_interface_delete_all_results_clicked)
 
     @staticmethod
     def _on_task_completed(task):
@@ -67,8 +73,8 @@ class Global:
         Global.event.tasks_list_updated.emit()
         Global.create_task()
 
-        if len(Global.tasks()) == 1:
-            Global.event.task_selected.emit(Global.tasks()[0])
+        if len(Global.tasks()) == 1 or Global._auto_plot:
+            Global.event.task_selected.emit(task)
 
         if Global.task_range().total_count():
             if not Global.task_range().uncompleted_count():
@@ -93,6 +99,15 @@ class Global:
     @staticmethod
     def _on_interface_redraw_clicked():
         Global.event.task_selected.emit(Global.task())
+
+    @staticmethod
+    def _on_interface_auto_plot_state_changed(checked):
+        Global._auto_plot = checked
+
+    @staticmethod
+    def _on_interface_delete_all_results_clicked():
+        Global._tasks = []
+        Global.event.tasks_list_updated.emit()
 
     @staticmethod
     def tasks():
@@ -128,6 +143,9 @@ class Global:
         Global._task = Task()
         Global.event.task_created.emit(Global._task)
 
+    @staticmethod
+    def auto_plot():
+        return Global._auto_plot
 
 class TaskResult(QObject):
 
@@ -142,10 +160,10 @@ class TaskResult(QObject):
         phases, values = mirror_phase_value_lists(phases, values)
         self._put_data(phases, values, 'result_value')
 
-        self.chi2 = float(0)
         for key in self.data():
             data = self.data()[key]
             if data['result_value'] and data['import_value']:
+                self.chi2 = float(0) if self.chi2 is None else self.chi2
                 self.chi2 += data['delta_value'] ** 2
 
     def _put_data(self, phases, values, key):
@@ -210,9 +228,6 @@ class Task(QObject):
         Global.event.task_selected.connect(self._on_task_selected)
         pass
 
-    def __del__(self):
-        print "Task(", self.id, ") deleted"
-
     def start(self):
         self.thread.set_semi_major_axis(self.input.semi_major_axis)
         self.thread.set_star_radius(self.input.star_radius)
@@ -243,7 +258,6 @@ class Task(QObject):
         self.result.set_result(result.phases, result.values)
         self.completed = True
         Global.event.task_completed.emit(self)
-        print 'Task( ', self.id, ' ) freeze'
         self.result.freeze()
 
     def _on_stopped(self):
@@ -253,7 +267,6 @@ class Task(QObject):
 
     def _on_task_selected(self, task):
         if task != self and self.completed and self.result.frozen() == False:
-            print 'Task( ', self.id, ' ) freeze'
             self.result.freeze()
 
     def stop(self):
