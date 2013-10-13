@@ -28,7 +28,7 @@ class RangeButton(QPushButton):
         font = QFont()
         font.setPixelSize(8)
         self.setFont(font)
-        self.setFixedSize(16, 16)
+        self.setFixedSize(18, 18)
         self.range_from = None
         self.range_to = None
         self.range_step = None
