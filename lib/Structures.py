@@ -1,7 +1,4 @@
-from copy import copy
 import hashlib
-from itertools import combinations
-import md5
 import marshal
 from numpy import random
 from PyQt4.QtCore import pyqtSignal, QObject, QThread

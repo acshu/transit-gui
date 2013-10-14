@@ -1,7 +1,7 @@
 from _ast import List
 from PyQt4.QtCore import Qt, pyqtSignal
-from PyQt4.QtGui import QDoubleSpinBox, QLabel, QWidget, QComboBox, QFont, QGroupBox, QTextEdit, QFrame, QCheckBox
-from matplotlib.backends.qt4_editor.formlayout import QPushButton, QDialog, QGridLayout, QVBoxLayout, QHBoxLayout, QLineEdit
+from PyQt4.QtGui import QDoubleSpinBox, QLabel, QWidget, QComboBox, QFont, QFrame, QCheckBox
+from matplotlib.backends.qt4_editor.formlayout import QPushButton, QDialog, QGridLayout, QVBoxLayout, QHBoxLayout
 from lib.Utils import frange, Constants, add_triplet
 
 

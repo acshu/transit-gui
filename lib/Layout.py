@@ -10,16 +10,12 @@ import sys
 import csv
 from PyQt4.QtCore import Qt, pyqtSignal, QString, QAbstractTableModel, QVariant, QEvent
 
-from PyQt4.QtGui import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QProgressBar, QGridLayout, QLabel, QCheckBox, QFileDialog, QMessageBox, QTabWidget, QLineEdit, QPalette, QSizePolicy, QColor, QTableWidget, QAbstractItemView, QMenu, QTableWidgetItem, QTableView, QAction, QGraphicsOpacityEffect
+from PyQt4.QtGui import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QProgressBar, QGridLayout, QLabel, QCheckBox, QFileDialog, QMessageBox, QTabWidget, QLineEdit, QPalette, QSizePolicy, QColor, QTableWidget, QAbstractItemView, QMenu, QTableWidgetItem, QTableView, QAction
 import math
 import gc
 from matplotlib import rcParams
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from matplotlib.mlab import detrend_mean
-import numpy
-from scipy.signal.signaltools import detrend
-from sympy.ntheory.partitions_ import npartitions
 from lib.Structures import Global, TaskRange
 from lib.Utils import Constants, TaskImporter, flip_phase_list, uc_variable_name
 from lib.FormParams import *
@@ -1247,7 +1243,7 @@ class ResultsTable(QTableView):
             self.last_scroll_position = self.verticalScrollBar().sliderPosition()
 
         self.setModel(ResultsTableModel(Global.tasks()))
-        self.sortByColumn(self.last_sort_column, self.last_sort_column)
+        self.sortByColumn(self.last_sort_column, self.last_sort_order)
         self.resizeColumnsToContents()
         self.horizontalHeader().setStretchLastSection(True)
         self.selectRow(self.last_selected_row)
