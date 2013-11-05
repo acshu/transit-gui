@@ -43,8 +43,8 @@ class TransitGUI(QMainWindow):
 
         self.setGeometry(0, 0, screen_width, screen_height)
 
-        self.setWindowTitle('TAC-maker 1.0.1')
-        self.setWindowIcon(QIcon('assets/icon.png')) 
+        self.setWindowTitle('TAC-maker 1.1.0')
+        self.setWindowIcon(QIcon('assets/icon.png'))
 
         self.init_menu()
 

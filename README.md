@@ -9,6 +9,6 @@ The code requires latest versions of [Python 2.x](http://python.org), [Scipy](ht
 For Windows users we recommend [Python(x,y)](https://code.google.com/p/pythonxy/) which includes latest python version along with commonly used scientific packages packed in a user-friendly installation.
 
 
-Prebuild version
+Prebuilt version
 ----------------
-You can also download prebuid Windows version of the transit-gui [here](http://astro.shu-bg.net/software/tac-maker/).
+You can also download prebuilt Windows version of the transit-gui [here](https://github.com/acshu/transit-gui/releases).
