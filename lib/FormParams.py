@@ -21,6 +21,8 @@ class CustomDoubleSpinBox(QDoubleSpinBox):
 class RangeButton(QPushButton):
 
     state_changed = pyqtSignal(bool)
+    TYPE_STEP = 'range-step'
+    TYPE_VALUES = 'range-values'
 
     def __init__(self):
         QPushButton.__init__(self)
@@ -29,6 +31,7 @@ class RangeButton(QPushButton):
         font.setPixelSize(8)
         self.setFont(font)
         self.setFixedSize(18, 18)
+        self.range_type = None
         self.range_from = None
         self.range_to = None
         self.range_step = None
@@ -38,10 +41,12 @@ class RangeButton(QPushButton):
     def set_range(self, range_from, range_to=None, range_step=None):
         if type(range_from) is list:
             self.values = range_from
+            self.range_type = RangeButton.TYPE_VALUES
         else:
             self.range_from = range_from
             self.range_to = range_to
             self.range_step = range_step
+            self.range_type = RangeButton.TYPE_STEP
             self.values = frange(range_from, range_to, range_step) + [range_to]
 
     def set_active(self, bool):

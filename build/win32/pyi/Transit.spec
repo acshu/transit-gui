@@ -1,7 +1,7 @@
 # -*- mode: python -*-
 a = Analysis(['..\\..\\..\\Transit.py'],
              pathex=['C:\\Users\\tolito\\work\\school\\projects\\workspace\\spyder\\transit-gui','C:\\Users\\tolito\\work\\school\\projects\\workspace\\spyder\\transit-lib'],
-             hiddenimports=['atexit','matplotlib','scipy','transitlib'],
+             hiddenimports=['atexit','matplotlib','scipy','transitlib','scipy.special._ufuncs_cxx'],
              hookspath=None)
 
 pyz = PYZ(a.pure)

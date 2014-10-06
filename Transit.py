@@ -43,7 +43,7 @@ class TransitGUI(QMainWindow):
 
         self.setGeometry(0, 0, screen_width, screen_height)
 
-        self.setWindowTitle('TAC-maker 1.1.0')
+        self.setWindowTitle('TAC-maker 1.1.1')
         self.setWindowIcon(QIcon('assets/icon.png'))
 
         self.init_menu()
@@ -125,6 +125,8 @@ class TransitGUI(QMainWindow):
                     os.unlink(file_path)
             except Exception, e:
                 print e
+
+        sys.exit()
 
 
 def main():

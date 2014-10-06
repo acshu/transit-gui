@@ -127,8 +127,8 @@ class InputForm(QWidget):
         Global.task().input.star_temperature = self.input_parameters.star_temperature.getValue()
         Global.task().input.planet_temperature = self.input_parameters.planet_temperature.getValue()
         Global.task().input.darkening_law = self.input_parameters.darkening_law.value.itemData(self.input_parameters.darkening_law.value.currentIndex()).toString()
-        Global.task().input.darkening_1 = self.input_parameters.darkening_coefficient_1.getValue()
-        Global.task().input.darkening_2 = self.input_parameters.darkening_coefficient_2.getValue()
+        Global.task().input.darkening_coefficient_1 = self.input_parameters.darkening_coefficient_1.getValue()
+        Global.task().input.darkening_coefficient_2 = self.input_parameters.darkening_coefficient_2.getValue()
         Global.task().input.inclination = self.input_parameters.inclination.getValue()
         Global.task().input.phase_start = 0
         Global.task().input.phase_end = self.input_parameters.phase_end.getValue()
@@ -200,8 +200,8 @@ class InputForm(QWidget):
             darkening_law_index += 1
 
         self.input_parameters.darkening_law.value.setCurrentIndex(darkening_law_index)
-        self.input_parameters.darkening_coefficient_1.value.setValue(task.input.darkening_1)
-        self.input_parameters.darkening_coefficient_2.value.setValue(task.input.darkening_2)
+        self.input_parameters.darkening_coefficient_1.value.setValue(task.input.darkening_coefficient_1)
+        self.input_parameters.darkening_coefficient_2.value.setValue(task.input.darkening_coefficient_2)
         self.input_parameters.phase_end.value.setValue(task.input.phase_end)
         self.input_parameters.phase_step.value.setValue(task.input.phase_step)
         self.input_parameters.integration_precision.value.setValue(log10(task.input.precision))
@@ -318,11 +318,12 @@ class InputForm(QWidget):
             config.set(section, name, param.getValue())
 
         if param.range:
-            if param.range.range_from and param.range.range_to and param.range.range_step:
+            if param.range.range_type == RangeButton.TYPE_STEP and \
+                param.range.range_from and param.range.range_to and param.range.range_step:
                 config.set(section, name + '_range_from', param.range.range_from)
                 config.set(section, name + '_range_to', param.range.range_to)
                 config.set(section, name + '_range_step', param.range.range_step)
-            elif param.range.values:
+            elif param.range.range_type == RangeButton.TYPE_VALUES and param.range.values:
                 config.set(section, name + '_range_values', param.range.values)
 
             if param.range.is_active():
@@ -1283,7 +1284,7 @@ class ResultsTableModel(QAbstractTableModel):
                                     task.input.star_temperature,
                                     task.input.planet_temperature,
                                     task.input.inclination,
-                                    task.input.darkening_law + '(' + str(task.input.darkening_1) + ', ' + str(task.input.darkening_2) + ')',
+                                    task.input.darkening_law + '(' + str(task.input.darkening_coefficient_1) + ', ' + str(task.input.darkening_coefficient_2) + ')',
                                     task.result.chi2])
 
     def rowCount(self, parent):

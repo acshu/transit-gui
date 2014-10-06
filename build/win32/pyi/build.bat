@@ -1,3 +1,3 @@
-python c:\Python27\Lib\site-packages\pyinstaller\pyinstaller.py Transit.spec
+python C:\Python27\Scripts\pyinstaller-script.py Transit.spec
 echo "Build done!"
 @PAUSE
